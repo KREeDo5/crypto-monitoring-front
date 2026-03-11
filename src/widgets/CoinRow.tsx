@@ -50,11 +50,11 @@ export const CoinRow: React.FC<CoinRowProps> = ({ row }) => {
       >
         <Avatar
           sx={{
-            bgcolor: "black", // Hardcode
+            bgcolor: "black", 
             width: 32,
             height: 32,
             fontSize: 14,
-            color: "white", // Hardcode
+            color: "white", 
           }}
         >
           {initial}
@@ -70,17 +70,17 @@ export const CoinRow: React.FC<CoinRowProps> = ({ row }) => {
       </Box>
 
       <ChangeBadge
-        value={row.percentHour}
+        value={row.hourChange}
         sx={{ flex: 0.9, justifyContent: "center", px: 3, py: 2 }}
       />
 
       <ChangeBadge
-        value={row.percentDay}
+        value={row.dayChange}
         sx={{ flex: 0.9, justifyContent: "center", px: 3, py: 2 }}
       />
 
       <ChangeBadge
-        value={row.percentWeek}
+        value={row.weekChange}
         sx={{ flex: 0.9, justifyContent: "center", px: 3, py: 2 }}
       />
 
@@ -126,7 +126,7 @@ export const CoinRow: React.FC<CoinRowProps> = ({ row }) => {
             <Line
               type="monotone"
               dataKey="value"
-              stroke={row.percentHour >= 0 ? theme.palette.success.main : theme.palette.error.main}
+              stroke={row.hourChange >= 0 ? theme.palette.success.main : theme.palette.error.main}
               strokeWidth={2}
               dot={false}
               isAnimationActive={false}

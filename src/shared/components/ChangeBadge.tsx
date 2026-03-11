@@ -7,6 +7,7 @@ type ChangeBadgeProps = {
 
 export const ChangeBadge: React.FC<ChangeBadgeProps> = ({ value, sx }) => {
   const isPositive = value >= 0;
+  const displayValue = (value != null && !isNaN(value)) ? value : 0;
 
   return (
     <Box
@@ -35,7 +36,7 @@ export const ChangeBadge: React.FC<ChangeBadgeProps> = ({ value, sx }) => {
         variant="button"
         sx={{ textTransform: "none" }}
       >
-        {value.toFixed(1)}%
+        {displayValue.toFixed(1)}%
       </Typography>
     </Box>
   );
