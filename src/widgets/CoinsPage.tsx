@@ -3,7 +3,7 @@ import { CoinsTable } from './CoinsTable';
 import { Box } from '@mui/material'; 
 import type {CoinRowData} from "../shared/types.ts";
 
-const BASE_URL = 'http://wesleygibson.ddns.net:25565/api'; 
+const BASE_URL = 'http://localhost:25565/api'; 
 
 const CoinsPage: React.FC = () => {
   const [rows, setRows] = useState<CoinRowData[]>([]);

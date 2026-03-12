@@ -5,7 +5,7 @@ import { MiniChartCard } from "../widgets/MiniChartCard.tsx";
 import { CoinsTable } from "../widgets/CoinsTable.tsx";
 import {coinRowsMock} from "../mock/coins.ts";
 import type { CoinRowData } from '../shared/types.ts';
-const BASE_URL = 'http://wesleygibson.ddns.net:25565/api';  
+const BASE_URL = 'http://localhost:25565/api';  
 
 /*Это надо заменить на топ 5 популярных на данный момент*/
 //const names = ["BTC", "Ethereum", "Tether", "BNB", "Solana"];
@@ -15,65 +15,122 @@ export const DashboardPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const updateRows = (updates: CoinRowData[]) => {
-    setRows(prevRows => {
-      const rowMap = new Map(prevRows.map(row => [row.symbol, row]));
-      updates.forEach(update => rowMap.set(update.symbol, { ...rowMap.get(update.symbol), ...update }));
-      return Array.from(rowMap.values());
-    });
-  };
+      console.log('Updating rows with:', updates); 
+      setRows(prevRows => {
+        const rowMap = new Map(prevRows.map(row => [row.symbol, row]));
+        updates.forEach(update => rowMap.set(update.symbol, { ...rowMap.get(update.symbol), ...update }));
+        return Array.from(rowMap.values());
+      });
+    };
 
   useEffect(() => {
-    const fetchInitialData = async () => {
+  const fetchInitialData = async () => {
+  try {
+    const response = await fetch(`api/coins/with_metrics`);
+    if (!response.ok) throw new Error('Ошибка загрузки данных');
+    const apiData = await response.json();
+
+    const historyPromises = apiData.map(async (coin: any) => {
       try {
-        const response = await fetch(`${BASE_URL}/coins/with_metrics`);
-        if (!response.ok) throw new Error('Ошибка загрузки данных');
-        const apiData = await response.json();
-        console.log('Raw API data:', apiData);  
-        const mappedData: CoinRowData[] = apiData.map((item: any) => ({
-          name: item.name || 'Unknown',
-          symbol: item.symbol || 'UNK',
-          price: item.price,
-          percentHour: item.hourChange,
-          percentDay: item.dayChange,
-          percentWeek: item.weekChange,
-          volumeDay: item.volume24h,
-          marketCap: item.marketCap,
-          sparkline: undefined, 
-        }));
-        setRows(mappedData);
+        const dayRes = await fetch(`/api/metrics/${coin.symbol}?period=DAY`);
+        const dayData = await dayRes.json();
+        const dayPrices = Array.isArray(dayData) 
+          ? dayData.map(item => Number(item.price)).filter(p => !isNaN(p))
+          : [];
+
+        const hourRes = await fetch(`/api/metrics/${coin.symbol}?period=HOUR`);
+        const hourData = await hourRes.json();
+        const hourPrices = Array.isArray(hourData)
+          ? hourData.map(item => Number(item.price)).filter(p => !isNaN(p))
+          : [];
+
+        return {
+          symbol: coin.symbol,
+          historyDay: dayPrices,
+          historyHour: hourPrices,
+        };
       } catch (err) {
-        console.error('Fetch error:', err);
-        setError((err as Error).message);
+        console.error(`Не удалось загрузить историю для ${coin.symbol}`, err);
+        return {
+          symbol: coin.symbol,
+          historyDay: [],
+          historyHour: [],
+        };
       }
+    });
+
+    const histories = await Promise.all(historyPromises);
+    const dayMap = new Map(histories.map(h => [h.symbol, h.historyDay]));
+    const hourMap = new Map(histories.map(h => [h.symbol, h.historyHour]));
+
+    const mappedData: CoinRowData[] = apiData.map((item: any) => ({
+      name: item.name || 'Unknown',
+      symbol: item.symbol || 'UNK',
+      price: Number(item.price ?? 0),
+      percentHour: Number(item.hourChange ?? 0),
+      percentDay: Number(item.dayChange ?? 0),
+      percentWeek: Number(item.weekChange ?? 0),
+      volumeDay: Number(item.volume24h ?? 0),
+      marketCap: Number(item.marketCap ?? 0),
+      priceHistoryDay: dayMap.get(item.symbol) || [],
+      priceHistoryHour: hourMap.get(item.symbol) || [],
+    }));
+
+    setRows(mappedData);
+  } catch (err) {
+    console.error('Fetch error:', err);
+    setError((err as Error).message);
+  }
+};
+
+fetchInitialData();
+
+    let eventSource: EventSource | null = null;
+
+    const connectSSE = () => {
+      console.log('Connecting to SSE...');  
+      eventSource = new EventSource(`api/stream/data`); 
+
+      eventSource.onopen = () => {
+        console.log('SSE connection opened');  
+      };
+
+      eventSource.addEventListener('data_update', (event) => {
+        try {
+          const rawUpdates = JSON.parse(event.data);
+
+          const updates = rawUpdates.map((item: any) => ({
+            name: item.name || 'Unknown',
+            symbol: item.symbol || 'UNK',
+            price: Number(item.price ?? 0),
+            percentHour: Number(item.hourChange ?? 0),
+            percentDay: Number(item.dayChange ?? 0),
+            percentWeek: Number(item.weekChange ?? 0),
+            volumeDay: Number(item.volume24h ?? 0),
+            marketCap: Number(item.marketCap ?? 0),
+          }));
+
+          console.log('Mapped SSE updates:', updates);  
+          updateRows(updates);
+        } catch (err) {
+          console.error('SSE parse error:', err);
+        }
+      });
+
+      eventSource.onerror = (err) => {
+        console.error('SSE error:', err);
+        eventSource?.close();
+        console.log('Reconnecting SSE in 5 seconds...');  
+        setTimeout(connectSSE, 5000);
+      };
     };
 
-    fetchInitialData();
+    connectSSE();
 
-    const eventSource = new EventSource(`${BASE_URL}/stream/data`);
-    eventSource.onmessage = (event) => {
-      try {
-        const rawUpdates = JSON.parse(event.data);
-        console.log('Raw SSE updates:', rawUpdates);  // Дебаг
-        const updates = rawUpdates.map((item: any) => ({
-          name: item.name || 'Unknown',
-          symbol: item.symbol || 'UNK',
-          price: item.price,
-          percentHour: item.hourChange,
-          percentDay: item.dayChange,
-          percentWeek: item.weekChange,
-          volumeDay: item.volume24h,
-          marketCap: item.marketCap,
-        }));
-        updateRows(updates);
-      } catch (err) {
-        console.error('SSE parse error:', err);
-      }
+    return () => {
+      console.log('Closing SSE connection');  
+      eventSource?.close();
     };
-    eventSource.onerror = (err) => {
-      console.error('SSE error:', err);
-    };
-
-    return () => eventSource.close();
   }, []);
 
   const top5 = useMemo(() => {
@@ -84,6 +141,10 @@ export const DashboardPage: React.FC = () => {
 
   if (error) {
     return <Box>Ошибка: {error}</Box>;
+  }
+
+  if (rows.length === 0) {
+    return <Box>Загрузка...</Box>;
   }
 
   return (
@@ -123,12 +184,13 @@ export const DashboardPage: React.FC = () => {
           spacing={2}
           sx={{ height: "156px", my: 2, overflow: "visible" }}
         >
-          {top5.map((row, index) => (
+          {top5.map((row) => (
             <Grid size={{ xs: 4, md: 2.4 }} key={row.symbol}>
               <MiniChartCard
-                name={row.name} 
-                price={row.price}  
-                changePercent={row.hourChange}  
+                name={row.name}
+                price={row.price}
+                changePercent={row.percentHour}
+                priceHistory={row.priceHistoryHour} // передаём историю
               />
             </Grid>
           ))}

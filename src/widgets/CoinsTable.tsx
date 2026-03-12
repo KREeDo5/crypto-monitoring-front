@@ -32,7 +32,7 @@ const columns = [
   },
   {
     key: "chart",
-    label: "Последние 7 дней",
+    label: "Последние 24 часа",
     flex: 1.3,
     align: "center" as const,
   },

@@ -2,9 +2,12 @@
 import { ThemeProvider } from "@mui/material/styles";
 import { theme } from "./theme.ts";
 import {DashboardPage} from "./pages/DashboardPage.tsx";
+import { CoinDetailsPage } from "./pages/CoinDetailsPage/CoinDetailsPage.tsx";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 export const App: React.FC = () => {
   return (
+      <BrowserRouter>
     <ThemeProvider theme={theme}>
       <CssBaseline />
 
@@ -25,11 +28,15 @@ export const App: React.FC = () => {
             overflowX: "hidden",
             overflowY: "auto",
           }}
-        >
-          <DashboardPage />
+        > 
+            <Routes>
+              <Route path="/" element={<DashboardPage />} />
+              <Route path="/coin/:symbol" element={<CoinDetailsPage />} />
+            </Routes>
         </Box>
       </Box>
     </ThemeProvider>
+    </BrowserRouter>
   );
 };
 

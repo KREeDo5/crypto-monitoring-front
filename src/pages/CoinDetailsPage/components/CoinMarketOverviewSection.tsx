@@ -1,184 +1,181 @@
-﻿import {
-  Box,
-  Button,
-  Chip,
-  Collapse,
-  Divider,
-  Grid,
-  LinearProgress,
-  Paper,
-  Stack,
-  Typography,
+﻿import React, { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
+import {
+  Box, Button, Chip, Collapse, Divider, Grid, LinearProgress,
+  Paper, Stack, Typography, CircularProgress, Alert
 } from "@mui/material";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import CurrencyBitcoinIcon from "@mui/icons-material/CurrencyBitcoin";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
-import { useState } from "react";
-import {
-  aiHtml,
-  metricRows,
-  periods,
-} from "../data.ts";
-import {theme} from "../../../theme.ts";
-import {glassButtonSx, glassButtonSxPressed} from "../../../shared/styles/glass.ts";
 import {
   Area,
   AreaChart,
   CartesianGrid,
   ResponsiveContainer,
   Tooltip,
-  type TooltipContentProps,
   XAxis,
   YAxis,
 } from "recharts";
-import {miniChartMock} from "../../../mock/miniChart.ts";
-import {alpha} from "@mui/material/styles";
-import type {
-  NameType,
-  ValueType,
-} from "recharts/types/component/DefaultTooltipContent";
+import { alpha } from "@mui/material/styles";
+import { theme } from "../../../theme.ts";
+import { glassButtonSx, glassButtonSxPressed } from "../../../shared/styles/glass.ts";
 
 const formatPrice = (value: number): string => {
-  return `${new Intl.NumberFormat("ru-RU", {
+  return new Intl.NumberFormat("ru-RU", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(value)} $`;
-}
+  }).format(value) + " $";
+};
 
-type YTickProps = {
-  x?: number;
-  y?: number;
-  payload?: {
-    value: number;
-  }
-}
+const formatCompactPrice = (value: number): string => {
+  if (value >= 1e12) return (value / 1e12).toFixed(2) + ' трлн $';
+  if (value >= 1e9) return (value / 1e9).toFixed(2) + ' млрд $';
+  if (value >= 1e6) return (value / 1e6).toFixed(2) + ' млн $';
+  return formatPrice(value);
+};
 
-const YTick = ({ x = 0, y = 0, payload }: YTickProps) => {
-  const raw = payload?.value ?? 0;
-  const formatted = String((raw / 1000).toFixed(raw % 1000 ? 1 : 0)).replace(
-    ".",
-    ",",
-  );
+const periods = ['1ч', '24ч', '7д', '30д'];
+const periodToApiParam = ['HOUR', 'DAY', 'WEEK', 'MONTH'];
 
+const YTick = (props: any) => {
+  const { x, y, payload } = props;
+  const value = payload.value;
+  const formatted = formatCompactPrice(value);
   return (
-    <text
-      x={x}
-      y={y}
-      dy={4}
-      textAnchor="start"
-      fill={theme.palette.text.secondary}
-      fontSize={10}
-      fontWeight={700}
-    >
-      {`$ ${formatted} тыс.`}
+    <text x={x} y={y} dy={4} textAnchor="start" fill={theme.palette.text.secondary} fontSize={10} fontWeight={700}>
+      {formatted}
     </text>
   );
 };
 
-const ChartToolTip = ({ active, payload, label }: TooltipContentProps<ValueType, NameType>) => {
+const ChartToolTip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
-
-  const value = Number(payload[0]?.value ?? 0);
-
+  const value = Number(payload[0].value ?? 0);
   return (
-    <div
-      style={{
-        borderRadius: 8,
-
-        backgroundColor: alpha(theme.palette.background.default, 0.1),
-        backdropFilter: "blur(10px)",
-        WebkitBackdropFilter: "blur(10px)",
-
-        border: "1px solid rgba(255, 255, 255, 0.1)",
-        borderTop: "1px solid rgba(255, 255, 255, 0.3)",
-
-        boxShadow: `0 0 10px 0 ${theme.palette.primary.main}`,
-
-        padding: "16px",
-
-        color: theme.palette.text.secondary,
-        fontWeight: 400,
-        fontSize: 12,
-        lineHeight: 1,
-      }}
-    >
-      <div>
-        {label}
-      </div>
+    <div style={{ borderRadius: 8, backgroundColor: alpha(theme.palette.background.default, 0.1), backdropFilter: "blur(10px)", border: "1px solid rgba(255,255,255,0.1)", borderTop: "1px solid rgba(255,255,255,0.3)", boxShadow: `0 0 10px 0 ${theme.palette.primary.main}`, padding: 16, color: theme.palette.text.secondary, fontWeight: 400, fontSize: 12 }}>
+      <div>{label}</div>
       <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
         <span>Цена:</span>
-        <span style={{ color: theme.palette.text.primary, fontWeight: 700 }}>
-          {formatPrice(value)}
-        </span>
+        <span style={{ color: theme.palette.text.primary, fontWeight: 700 }}>{formatPrice(value)}</span>
       </div>
     </div>
   );
 };
 
 export const CoinMarketOverviewSection: React.FC = () => {
-  const [isAiSummaryOpen, setIsAiSummaryOpen] = useState(false);
+  const { symbol } = useParams<{ symbol: string }>();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [coinInfo, setCoinInfo] = useState<any>(null);
+  const [history, setHistory] = useState<any[]>([]);
   const [activePeriod, setActivePeriod] = useState(0);
+  const [isAiSummaryOpen, setIsAiSummaryOpen] = useState(false);
+
+  useEffect(() => {
+    if (!symbol) return;
+
+    const fetchData = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const coinsRes = await fetch('/api/coins/with_metrics');
+        if (!coinsRes.ok) throw new Error('Ошибка загрузки данных монет');
+        const coinsData = await coinsRes.json();
+        const coin = coinsData.find(
+          (c: any) => c.symbol?.toUpperCase() === symbol?.toUpperCase()
+        );
+        if (!coin) throw new Error('Монета не найдена');
+        const safeCoin = {
+        name: coin.name || 'Unknown',
+        symbol: coin.symbol || '',
+        price: coin.price ?? 0,
+        percentHour: coin.hourChange ?? 0,   
+        percentDay: coin.dayChange ?? 0,    
+        volume24h: coin.volume24h ?? 0,
+        marketCap: coin.marketCap ?? 0,
+      };
+      setCoinInfo(safeCoin);
+
+        const periodParam = periodToApiParam[activePeriod];
+        const historyRes = await fetch(`/api/metrics/${symbol}?period=${periodParam}`);
+        if (!historyRes.ok) throw new Error('Ошибка загрузки истории');
+        const historyData = await historyRes.json();
+        setHistory(historyData);
+      } catch (err) {
+        setError((err as Error).message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [symbol, activePeriod]);
+
+  // Подготовка данных для графика
+  const chartData = history.map((item, idx) => ({
+    time: idx, // можно заменить на форматированную дату, если нужно
+    value: item.price,
+  }));
+
+  // Вычисляем min/max для прогресс-бара (за 24ч)
+  const dayHistory = history.filter((_, idx) => idx >= history.length - 24);
+  const minPrice = dayHistory.length ? Math.min(...dayHistory.map(d => d.price)) : 0;
+  const maxPrice = dayHistory.length ? Math.max(...dayHistory.map(d => d.price)) : 0;
+  const currentPrice = coinInfo?.price || 0;
+  const progressValue = maxPrice > minPrice ? ((currentPrice - minPrice) / (maxPrice - minPrice)) * 100 : 0;
+
+  // Домен для оси Y графика
+  const yValues = chartData.map(d => d.value);
+  const yMin = Math.min(...yValues);
+  const yMax = Math.max(...yValues);
+  const yPadding = (yMax - yMin) * 0.1 || 1;
+  const yDomain = [yMin - yPadding, yMax + yPadding];
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error || !coinInfo) {
+    return (
+      <Alert severity="error" sx={{ m: 2 }}>
+        {error || 'Не удалось загрузить данные'}
+      </Alert>
+    );
+  }
 
   return (
-    <Paper
-      elevation={0}
-      sx={{
-        py: 2,
-        background: "none",
-      }}
-    >
+    <Paper elevation={0} sx={{ py: 2, background: "none" }}>
       <Grid container spacing={2.5} alignItems="stretch">
+        {/* Левая колонка с информацией */}
         <Grid size={{ xs: 12, md: 4.2 }} sx={{ display: "flex" }}>
           <Stack spacing={2.5} sx={{ width: "100%" }}>
-            <Stack
-              direction="row"
-              justifyContent="space-between"
-              alignItems="center"
-            >
+            {/* Шапка */}
+            <Stack direction="row" justifyContent="space-between" alignItems="center">
               <Stack direction="row" spacing={1.5} alignItems="center">
-                <Box
-                  sx={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: "50%",
-                    backgroundColor: "#000",
-                    color: "#fff",
-                    display: "grid",
-                    placeItems: "center",
-                  }}
-                >
+                <Box sx={{ width: 40, height: 40, borderRadius: "50%", bgcolor: "#000", color: "#fff", display: "grid", placeItems: "center" }}>
                   <CurrencyBitcoinIcon sx={{ fontSize: 16 }} />
                 </Box>
-
-                <Typography
-                  sx={{ color: "text.primary", fontSize: 18, fontWeight: 700 }}
-                >
-                  Bitcoin{" "}
-                  <Box
-                    component="span"
-                    sx={{ color: "primary.main", fontWeight: 400 }}
-                  >
-                    курс BTC
+                <Typography sx={{ color: "text.primary", fontSize: 18, fontWeight: 700 }}>
+                  {coinInfo.name}{" "}
+                  <Box component="span" sx={{ color: "primary.main", fontWeight: 400 }}>
+                    курс {coinInfo.symbol}
                   </Box>
                 </Typography>
               </Stack>
-
-              <Typography
-                sx={{
-                  color: "text.primary",
-                  fontWeight: 700,
-                  fontSize: 32,
-                  lineHeight: 1,
-                }}
-              >
-                65 539,97 $
+              <Typography sx={{ color: "text.primary", fontWeight: 700, fontSize: 32, lineHeight: 1 }}>
+                {coinInfo.price ? formatPrice(coinInfo.price) : 'N/A'}
               </Typography>
             </Stack>
 
+            {/* Прогресс-бар диапазона */}
             <Stack spacing={1}>
               <LinearProgress
                 variant="determinate"
-                value={70}
+                value={progressValue}
                 sx={{
                   height: 12,
                   borderRadius: 1.5,
@@ -189,61 +186,61 @@ export const CoinMarketOverviewSection: React.FC = () => {
                   },
                 }}
               />
-
-              <Stack
-                direction="row"
-                justifyContent="space-between"
-                sx={{
-                  color: "text.secondary",
-                  fontSize: 14,
-                  fontWeight: 500,
-                  lineHeight: 1,
-                }}
-              >
-                <Typography>64 435,13 $</Typography>
+              <Stack direction="row" justifyContent="space-between" sx={{ color: "text.secondary", fontSize: 14, fontWeight: 500 }}>
+                <Typography>{formatPrice(minPrice)}</Typography>
                 <Typography>Диапазон 24 ч.</Typography>
-                <Typography>67 695,50 $</Typography>
+                <Typography>{formatPrice(maxPrice)}</Typography>
               </Stack>
             </Stack>
 
+            {/* Метрики */}
             <Stack spacing={1.25}>
-              {metricRows.map((row) => (
-                <Stack
-                  key={row.label}
-                  direction="row"
-                  justifyContent="space-between"
-                  alignItems="center"
-                  sx={{ py: 1.25 }}
-                >
-                  <Stack direction="row" spacing={0.5} alignItems="center">
-                    <Typography
-                      sx={{
-                        color: "text.secondary",
-                        fontSize: 14,
-                        fontWeight: 500,
-                        lineHeight: 1,
-                      }}
-                    >
-                      {row.label}
-                    </Typography>
-                    <InfoOutlinedIcon
-                      sx={{ color: "text.secondary", fontSize: 14 }}
-                    />
-                  </Stack>
-                  <Typography
-                    sx={{
-                      color: "text.primary",
-                      fontSize: 16,
-                      fontWeight: 500,
-                      lineHeight: 1,
-                    }}
-                  >
-                    {row.value}
-                  </Typography>
+              <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ py: 1.25 }}>
+                <Stack direction="row" spacing={0.5} alignItems="center">
+                  <Typography sx={{ color: "text.secondary", fontSize: 14, fontWeight: 500 }}>Рыночная капитализация</Typography>
+                  <InfoOutlinedIcon sx={{ color: "text.secondary", fontSize: 14 }} />
                 </Stack>
-              ))}
+                <Typography sx={{ color: "text.primary", fontSize: 16, fontWeight: 500 }}>
+                  {coinInfo.marketCap ? formatCompactPrice(coinInfo.marketCap) : 'N/A'}
+                </Typography>
+              </Stack>
+
+              <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ py: 1.25 }}>
+                <Stack direction="row" spacing={0.5} alignItems="center">
+                  <Typography sx={{ color: "text.secondary", fontSize: 14, fontWeight: 500 }}>Объём торгов (24ч)</Typography>
+                  <InfoOutlinedIcon sx={{ color: "text.secondary", fontSize: 14 }} />
+                </Stack>
+                <Typography sx={{ color: "text.primary", fontSize: 16, fontWeight: 500 }}>
+                  {coinInfo.volume24h ? formatCompactPrice(coinInfo.volume24h) : 'N/A'}
+                </Typography>
+              </Stack>
+
+              <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ py: 1.25 }}>
+                <Stack direction="row" spacing={0.5} alignItems="center">
+                  <Typography sx={{ color: "text.secondary", fontSize: 14, fontWeight: 500 }}>Изменение за 1ч</Typography>
+                  <InfoOutlinedIcon sx={{ color: "text.secondary", fontSize: 14 }} />
+                </Stack>
+                <Typography sx={{ color: "text.primary", fontSize: 16, fontWeight: 500, color: coinInfo.percentHour >= 0 ? 'success.main' : 'error.main' }}>
+                  {coinInfo.percentHour != null 
+                    ? (coinInfo.percentHour > 0 ? '+' : '') + coinInfo.percentHour.toFixed(2) + '%' 
+                    : 'N/A'}
+                </Typography>
+              </Stack>
+
+              <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ py: 1.25 }}>
+                <Stack direction="row" spacing={0.5} alignItems="center">
+                  <Typography sx={{ color: "text.secondary", fontSize: 14, fontWeight: 500 }}>Изменение за 24ч</Typography>
+                  <InfoOutlinedIcon sx={{ color: "text.secondary", fontSize: 14 }} />
+                </Stack>
+                <Typography sx={{ color: "text.primary", fontSize: 16, fontWeight: 500, color: coinInfo.percentDay >= 0 ? 'success.main' : 'error.main' }}>
+                  {coinInfo.percentDay != null 
+                    ? (coinInfo.percentDay > 0 ? '+' : '') + coinInfo.percentDay.toFixed(2) + '%' 
+                    : 'N/A'}
+                </Typography>
+              </Stack>
             </Stack>
 
+            {/* Кнопка AI-резюме */}
             {!isAiSummaryOpen && (
               <Button
                 startIcon={<AutoAwesomeIcon />}
@@ -263,9 +260,7 @@ export const CoinMarketOverviewSection: React.FC = () => {
                   justifyContent: "center",
                   transition: "box-shadow 0.15s linear",
                   "& .MuiButton-startIcon": { color: "text.primary" },
-                  "&:hover": {
-                    boxShadow: `0 0 20px 0 ${theme.palette.primary.main}`,
-                  },
+                  "&:hover": { boxShadow: `0 0 20px 0 ${theme.palette.primary.main}` },
                 }}
               >
                 Резюме от Искусственного Интеллекта
@@ -274,14 +269,11 @@ export const CoinMarketOverviewSection: React.FC = () => {
           </Stack>
         </Grid>
 
+        {/* Правая колонка с графиком */}
         <Grid size={{ xs: 12, md: 7.8 }} sx={{ display: "flex" }}>
           <Stack spacing={2} sx={{ width: "100%", height: "100%" }}>
-            <Stack
-              direction="row"
-              spacing={1.25}
-              flexWrap="nowrap"
-              sx={{ width: "100%" }}
-            >
+            {/* Переключатели периодов */}
+            <Stack direction="row" spacing={1.25} flexWrap="nowrap" sx={{ width: "100%" }}>
               {periods.map((period, index) => (
                 <Chip
                   key={index}
@@ -297,108 +289,47 @@ export const CoinMarketOverviewSection: React.FC = () => {
                     fontWeight: 700,
                     fontSize: 12,
                     lineHeight: 1,
-                    "& .MuiChip-label": {
-                      width: "100%",
-                      textAlign: "center",
-                      whiteSpace: "nowrap",
-                    },
+                    "& .MuiChip-label": { width: "100%", textAlign: "center", whiteSpace: "nowrap" },
                     ...glassButtonSx(muiTheme),
-                    ...(activePeriod === index
-                      ? glassButtonSxPressed(muiTheme)
-                      : {}),
+                    ...(activePeriod === index ? glassButtonSxPressed(muiTheme) : {}),
                   })}
                   onClick={() => setActivePeriod(index)}
                 />
               ))}
             </Stack>
 
-            <Box
-              sx={{
-                flex: 1,
-                minHeight: { xs: 260, md: 0 },
-                "&, & *": {
-                  outline: "none",
-                },
-              }}
-            >
+            {/* График */}
+            <Box sx={{ flex: 1, minHeight: { xs: 260, md: 0 }, "&, & *": { outline: "none" } }}>
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart
-                  data={miniChartMock}
-                  margin={{ top: 12, right: 0, bottom: 0, left: 0 }}
-                >
+                <AreaChart data={chartData} margin={{ top: 12, right: 0, bottom: 0, left: 0 }}>
                   <defs>
-                    <filter
-                      id="filter"
-                      x="-20%"
-                      y="-50%"
-                      width="140%"
-                      height="200%"
-                    >
-                      <feGaussianBlur
-                        in="SourceAlpha"
-                        stdDeviation="6"
-                        result="blur"
-                      />
+                    <filter id="filter" x="-20%" y="-50%" width="140%" height="200%">
+                      <feGaussianBlur in="SourceAlpha" stdDeviation="6" result="blur" />
                       <feOffset in="blur" dx="0" dy="-2" result="offsetBlur" />
-                      <feFlood
-                        floodColor={theme.palette.primary.main}
-                        floodOpacity="1"
-                        result="color"
-                      />
-                      <feComposite
-                        in="color"
-                        in2="offsetBlur"
-                        operator="in"
-                        result="shadow"
-                      />
-                      <feComposite
-                        in="SourceGraphic"
-                        in2="shadow"
-                        operator="over"
-                      />
+                      <feFlood floodColor={theme.palette.primary.main} floodOpacity="1" result="color" />
+                      <feComposite in="color" in2="offsetBlur" operator="in" result="shadow" />
+                      <feComposite in="SourceGraphic" in2="shadow" operator="over" />
                     </filter>
-
                     <linearGradient id="fill" x1="0" y1="0" x2="0" y2="1">
-                      <stop
-                        offset="0%"
-                        stopColor={theme.palette.primary.main}
-                        stopOpacity={0.8}
-                      />
-                      <stop
-                        offset="100%"
-                        stopColor={theme.palette.primary.main}
-                        stopOpacity={0.2}
-                      />
+                      <stop offset="0%" stopColor={theme.palette.primary.main} stopOpacity={0.8} />
+                      <stop offset="100%" stopColor={theme.palette.primary.main} stopOpacity={0.2} />
                     </linearGradient>
                   </defs>
 
-                  <CartesianGrid
-                    vertical={false}
-                    stroke="rgba(120,130,190,0.55)"
-                    strokeDasharray="3.5 3.5"
-                  />
+                  <CartesianGrid vertical={false} stroke="rgba(120,130,190,0.55)" strokeDasharray="3.5 3.5" />
 
                   <XAxis
                     dataKey="time"
-                    ticks={[0, 5, 10, 15, 20, 25]} // Тоже побольше надо
                     height={16}
                     tickMargin={0}
                     axisLine={false}
                     tickLine={false}
                     padding={{ left: 0, right: 0 }}
-                    tick={{
-                      fill: theme.palette.text.secondary,
-                      fontSize: 10,
-                      fontWeight: 700,
-                    }}
+                    tick={{ fill: theme.palette.text.secondary, fontSize: 10, fontWeight: 700 }}
                   />
                   <YAxis
                     orientation="right"
-                    domain={[4960, 5050]} // Нижнее, верхнее должен быть отступ от фактических минимальных и максимальных данных. Линия не касается пола и потолка графа
-                    ticks={[
-                      4960, 4970, 4980, 4990, 5000, 5010, 5020, 5030, 5040,
-                      5050,
-                    ]} // Шаги 10 штук ровно должно быть сгенерено
+                    domain={yDomain}
                     width={64}
                     tickMargin={-2}
                     axisLine={false}
@@ -406,32 +337,10 @@ export const CoinMarketOverviewSection: React.FC = () => {
                     tick={<YTick />}
                   />
 
-                  <Tooltip
-                    cursor={{
-                      stroke: "none",
-                    }}
-                    isAnimationActive
-                    animationDuration={100}
-                    content={(props) => <ChartToolTip {...props} />}
-                  />
+                  <Tooltip cursor={{ stroke: "none" }} isAnimationActive animationDuration={100} content={<ChartToolTip />} />
 
-                  <Area
-                    type="linear"
-                    dataKey="value"
-                    stroke="none"
-                    fill={`url(#fill)`}
-                    tooltipType="none"
-                    activeDot={false}
-                    animationDuration={1000}
-                  />
-                  <Area
-                    type="linear"
-                    dataKey="value"
-                    stroke={theme.palette.primary.main}
-                    style={{ filter: `url(#filter)` }}
-                    fill="transparent"
-                    dot={false}
-                  />
+                  <Area type="linear" dataKey="value" stroke="none" fill={`url(#fill)`} tooltipType="none" activeDot={false} animationDuration={1000} />
+                  <Area type="linear" dataKey="value" stroke={theme.palette.primary.main} style={{ filter: `url(#filter)` }} fill="transparent" dot={false} />
                 </AreaChart>
               </ResponsiveContainer>
             </Box>
@@ -439,62 +348,18 @@ export const CoinMarketOverviewSection: React.FC = () => {
         </Grid>
       </Grid>
 
+      {/* AI-резюме */}
       <Collapse in={isAiSummaryOpen} timeout={320}>
-        <Paper
-          sx={{
-            mt: 4,
-            p: 2,
-            border: "1px solid transparent",
-            borderRadius: 2,
-            background: `linear-gradient(${theme.palette.aiGradient.background}, ${theme.palette.aiGradient.background}) padding-box, linear-gradient(90deg, ${theme.palette.aiGradient.start}, ${theme.palette.aiGradient.end}) border-box`,
-            boxShadow: `0 0 20px 0 ${theme.palette.primary.main}`,
-          }}
-        >
+        <Paper sx={{ mt: 4, p: 2, border: "1px solid transparent", borderRadius: 2, background: `linear-gradient(${theme.palette.aiGradient.background}, ${theme.palette.aiGradient.background}) padding-box, linear-gradient(90deg, ${theme.palette.aiGradient.start}, ${theme.palette.aiGradient.end}) border-box`, boxShadow: `0 0 20px 0 ${theme.palette.primary.main}` }}>
           <Stack direction="row" spacing={1} alignItems="center">
             <AutoAwesomeIcon sx={{ height: 18 }} />
-            <Typography
-              sx={{ color: "text.primary", fontWeight: 500, fontSize: 16 }}
-            >
-              Резюме от Искусственного Интеллекта
-            </Typography>
+            <Typography sx={{ color: "text.primary", fontWeight: 500, fontSize: 16 }}>Резюме от Искусственного Интеллекта</Typography>
           </Stack>
-
-          <Typography
-            sx={{
-              color: "text.secondary",
-              fontSize: 14,
-              mt: 0.5,
-              lineHeight: 1.4,
-            }}
-          >
-            *Ответ сгенерирован ИИ на основе текущих данных по Bitcoin и не
-            является финансовой рекомендацией.
-          </Typography>
-
+          <Typography sx={{ color: "text.secondary", fontSize: 14, mt: 0.5, lineHeight: 1.4 }}>*Ответ сгенерирован ИИ на основе текущих данных и не является финансовой рекомендацией.</Typography>
           <Divider sx={{ borderColor: "rgba(90, 112, 255, 0.7)", my: 1.2 }} />
-
-          <Box
-            sx={{
-              color: "text.secondary",
-              fontSize: 16,
-              lineHeight: 1.4,
-              "& p": {
-                margin: 0,
-                marginBottom: 1,
-              },
-              "& p:not(:has(+ p))": {
-                marginBottom: 0,
-              },
-              "& ul, & ol": {
-                margin: 0,
-                paddingLeft: "18px",
-              },
-            }}
-            dangerouslySetInnerHTML={{ __html: aiHtml }}
-          />
+          <Box dangerouslySetInnerHTML={{ __html: "<p>Здесь будет сгенерированный текст...</p>" }} sx={{ color: "text.secondary", fontSize: 16, lineHeight: 1.4 }} />
         </Paper>
       </Collapse>
     </Paper>
   );
 };
-

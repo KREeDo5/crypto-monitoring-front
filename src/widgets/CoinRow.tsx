@@ -1,19 +1,34 @@
 ﻿import { Avatar, Box, Typography } from "@mui/material";
-import {ChangeBadge} from "../shared/components/ChangeBadge.tsx";
+import { ChangeBadge } from "../shared/components/ChangeBadge.tsx";
+import type { CoinRowData } from "../shared/types.ts";
+import { theme } from "../theme.ts";
+import { Line } from 'react-chartjs-2';
 import {
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  XAxis,
-  YAxis,
-} from "recharts";
-import type {CoinRowData} from "../shared/types.ts";
-import {miniChartMock} from "../mock/miniChart.ts";
-import {theme} from "../theme.ts";
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler
+} from 'chart.js';
+import { useNavigate } from 'react-router-dom';
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler
+);
 
 type CoinRowProps = {
   row: CoinRowData;
-}
+};
 
 const moneyTextSx = {
   fontSize: "0.75rem",
@@ -24,12 +39,46 @@ const moneyTextSx = {
 } as const;
 
 export const CoinRow: React.FC<CoinRowProps> = ({ row }) => {
-  const series = miniChartMock;
-
   const initial = row.name.charAt(0).toUpperCase();
+  const navigate = useNavigate();
+  const handleClick = () => {
+    navigate(`/coin/${row.symbol.toLowerCase()}`); 
+  };
+  // Данные для графика строятся на основе истории цен
+  const chartData = {
+    labels: row.priceHistoryDay.map((_, idx) => idx),
+    datasets: [
+      {
+        data: row.priceHistoryDay,
+        borderColor: row.percentHour >= 0 ? theme.palette.success.main : theme.palette.error.main,
+        backgroundColor: 'transparent',
+        borderWidth: 2,
+        pointRadius: 0,
+        fill: false,
+        tension: 0.1,
+      },
+    ],
+  };
+
+  const options = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: { enabled: false },
+    },
+    scales: {
+      x: { display: false },
+      y: { display: false },
+    },
+    elements: {
+      line: { borderJoinStyle: 'round' as const },
+    },
+  };
 
   return (
     <Box
+      onClick={handleClick}
       sx={{
         display: "flex",
         alignItems: "center",
@@ -38,6 +87,7 @@ export const CoinRow: React.FC<CoinRowProps> = ({ row }) => {
         borderTopColor: "background.default",
       }}
     >
+      {/* Колонка с названием и символом */}
       <Box
         sx={{
           flex: 2,
@@ -50,11 +100,11 @@ export const CoinRow: React.FC<CoinRowProps> = ({ row }) => {
       >
         <Avatar
           sx={{
-            bgcolor: "black", 
+            bgcolor: "black",
             width: 32,
             height: 32,
             fontSize: 14,
-            color: "white", 
+            color: "white",
           }}
         >
           {initial}
@@ -69,18 +119,17 @@ export const CoinRow: React.FC<CoinRowProps> = ({ row }) => {
         </Box>
       </Box>
 
+      {/* Изменения */}
       <ChangeBadge
-        value={row.hourChange}
+        value={row.percentHour}
         sx={{ flex: 0.9, justifyContent: "center", px: 3, py: 2 }}
       />
-
       <ChangeBadge
-        value={row.dayChange}
+        value={row.percentDay}
         sx={{ flex: 0.9, justifyContent: "center", px: 3, py: 2 }}
       />
-
       <ChangeBadge
-        value={row.weekChange}
+        value={row.percentWeek}
         sx={{ flex: 0.9, justifyContent: "center", px: 3, py: 2 }}
       />
 
@@ -93,11 +142,7 @@ export const CoinRow: React.FC<CoinRowProps> = ({ row }) => {
           py: 2,
         }}
       >
-        <Typography
-          variant="button"
-          sx={moneyTextSx}
-          color="text.secondary"
-        >
+        <Typography variant="button" sx={moneyTextSx} color="text.secondary">
           ${row.volumeDay.toLocaleString()}
         </Typography>
       </Box>
@@ -111,31 +156,18 @@ export const CoinRow: React.FC<CoinRowProps> = ({ row }) => {
           py: 2,
         }}
       >
-        <Typography
-          variant="button"
-          sx={moneyTextSx}
-          color="text.secondary"
-        >
+        <Typography variant="button" sx={moneyTextSx} color="text.secondary">
           ${row.marketCap.toLocaleString()}
         </Typography>
       </Box>
 
       <Box sx={{ width: "160px", height: "64px", px: 2, py: 0.5, pointerEvents: "none" }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={series}>
-            <Line
-              type="monotone"
-              dataKey="value"
-              stroke={row.hourChange >= 0 ? theme.palette.success.main : theme.palette.error.main}
-              strokeWidth={2}
-              dot={false}
-              isAnimationActive={false}
-            />
-            <XAxis dataKey="time" hide />
-            <YAxis hide />
-          </LineChart>
-        </ResponsiveContainer>
+        {row.priceHistoryDay.length > 0 ? (
+          <Line data={chartData} options={options} />
+        ) : (
+          <Box sx={{ width: '100%', height: '100%', bgcolor: 'background.paper' }} />
+        )}
       </Box>
     </Box>
   );
-}
+};

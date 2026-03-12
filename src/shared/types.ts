@@ -19,4 +19,6 @@ name: string;
   dayChange: number;
   weekChange: number;
   volumeDay: number;
+  priceHistoryDay: number[];  
+  priceHistoryHour: number[];  
 };

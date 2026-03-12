@@ -4,4 +4,15 @@ import react from '@vitejs/plugin-react'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  server: {
+    proxy: {
+      // Все запросы, начинающиеся с /api, будут перенаправляться на бэкенд
+      '/api': {
+        target: 'http://localhost:25565', // URL вашего бэкенда
+        changeOrigin: true,
+        // Опционально: если нужно переписать путь
+        // rewrite: (path) => path.replace(/^\/api/, '')
+      }
+    }
+  }
 })

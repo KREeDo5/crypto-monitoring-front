@@ -21,16 +21,20 @@ type MiniChartCardProps = {
   name: string;
   price: number;
   changePercent: number;
+  priceHistory: number[]; 
 };
 
 export const MiniChartCard: React.FC<MiniChartCardProps> = ({
   name,
   price,
   changePercent,
+  priceHistory,
 }) => {
   const fillId = `fill-${name.replace(/\s+/g, "")}`;
   const filterId = `filter-${name.replace(/\s+/g, "")}`;
-
+  const chartData = (priceHistory.length > 0 ? priceHistory : [price]).map(
+    (value, index) => ({ value, time: index })
+  );
   const data = miniChartMock;
   const isPositive = changePercent >= 0;
 
@@ -125,7 +129,7 @@ export const MiniChartCard: React.FC<MiniChartCardProps> = ({
         <Box sx={{ height: 80, pointerEvents: "none" }}>
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart
-              data={data}
+              data={chartData}
               margin={{ top: 8, right: 0, bottom: 0, left: 0 }}
             >
               <defs>
@@ -170,8 +174,12 @@ export const MiniChartCard: React.FC<MiniChartCardProps> = ({
                 </linearGradient>
               </defs>
 
-              <XAxis dataKey="time" hide padding={{ left: 0, right: 0 }} />
-              <YAxis hide />
+      <XAxis dataKey="time" hide padding={{ left: 0, right: 0 }} />
+      <YAxis 
+        hide 
+        domain={['dataMin', 'dataMax']} 
+        padding={{ top: 20, bottom: 20 }} 
+      />
 
               <Area
                 type="monotone"
