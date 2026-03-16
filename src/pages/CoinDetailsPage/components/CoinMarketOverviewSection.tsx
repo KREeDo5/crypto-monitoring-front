@@ -51,13 +51,15 @@ const YTick = (props: any) => {
 const ChartToolTip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   const value = Number(payload[0].value ?? 0);
+  const date = new Date(label);
+  const formattedDate = date.toLocaleString('ru-RU', { 
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit'
+  });
   return (
     <div style={{ borderRadius: 8, backgroundColor: alpha(theme.palette.background.default, 0.1), backdropFilter: "blur(10px)", border: "1px solid rgba(255,255,255,0.1)", borderTop: "1px solid rgba(255,255,255,0.3)", boxShadow: `0 0 10px 0 ${theme.palette.primary.main}`, padding: 16, color: theme.palette.text.secondary, fontWeight: 400, fontSize: 12 }}>
-      <div>{label}</div>
-      <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
-        <span>Цена:</span>
-        <span style={{ color: theme.palette.text.primary, fontWeight: 700 }}>{formatPrice(value)}</span>
-      </div>
+      <div>{formattedDate}</div>
+      <div>Цена: {formatPrice(value)}</div>
     </div>
   );
 };
@@ -70,6 +72,21 @@ export const CoinMarketOverviewSection: React.FC = () => {
   const [history, setHistory] = useState<any[]>([]);
   const [activePeriod, setActivePeriod] = useState(0);
   const [isAiSummaryOpen, setIsAiSummaryOpen] = useState(false);
+  const tickCount = 6;
+
+
+  const formatXAxis = (timestamp: number) => {
+    const date = new Date(timestamp);
+    if (activePeriod === 0) { // 1ч
+      return `${date.getHours()}:${date.getMinutes().toString().padStart(2, '0')}`;
+    } else if (activePeriod === 1) { // 24ч
+      return `${date.getHours()}:00`;
+    } else if (activePeriod === 2) { // 7д
+      return date.toLocaleDateString('ru-RU', { weekday: 'short', hour: '2-digit' });
+    } else { // 30д и другие
+      return date.toLocaleDateString('ru-RU', { day: '2-digit', month: 'short' });
+    }
+  };
 
   useEffect(() => {
     if (!symbol) return;
@@ -97,9 +114,16 @@ export const CoinMarketOverviewSection: React.FC = () => {
       setCoinInfo(safeCoin);
 
         const periodParam = periodToApiParam[activePeriod];
-        const historyRes = await fetch(`/api/metrics/${symbol}?period=${periodParam}`);
+        const historyRes = await fetch(`/api/metrics/${symbol.toUpperCase()}?period=${periodParam}`);
         if (!historyRes.ok) throw new Error('Ошибка загрузки истории');
         const historyData = await historyRes.json();
+        console.log('📊 historyRes:', historyRes);
+        console.log('📊 historyData:', historyData);
+        console.log('📊 history length:', historyData.length);
+        if (historyData.length > 0) {
+          console.log('📊 first item:', historyData[0]);
+          console.log('📊 first item price:', historyData[0].price);
+        }
         setHistory(historyData);
       } catch (err) {
         setError((err as Error).message);
@@ -111,26 +135,23 @@ export const CoinMarketOverviewSection: React.FC = () => {
     fetchData();
   }, [symbol, activePeriod]);
 
-  // Подготовка данных для графика
-  const chartData = history.map((item, idx) => ({
-    time: idx, // можно заменить на форматированную дату, если нужно
-    value: item.price,
-  }));
+const chartData = history.map((item) => ({
+  timestamp: item.unixSeconds * 1000, // преобразуем в миллисекунды для Date
+  value: item.price,
+}));
 
-  // Вычисляем min/max для прогресс-бара (за 24ч)
   const dayHistory = history.filter((_, idx) => idx >= history.length - 24);
   const minPrice = dayHistory.length ? Math.min(...dayHistory.map(d => d.price)) : 0;
   const maxPrice = dayHistory.length ? Math.max(...dayHistory.map(d => d.price)) : 0;
   const currentPrice = coinInfo?.price || 0;
   const progressValue = maxPrice > minPrice ? ((currentPrice - minPrice) / (maxPrice - minPrice)) * 100 : 0;
 
-  // Домен для оси Y графика
   const yValues = chartData.map(d => d.value);
   const yMin = Math.min(...yValues);
   const yMax = Math.max(...yValues);
   const yPadding = (yMax - yMin) * 0.1 || 1;
   const yDomain = [yMin - yPadding, yMax + yPadding];
-
+  const interval = chartData.length > 10 ? Math.ceil(chartData.length / 6) : 0;
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
@@ -150,10 +171,8 @@ export const CoinMarketOverviewSection: React.FC = () => {
   return (
     <Paper elevation={0} sx={{ py: 2, background: "none" }}>
       <Grid container spacing={2.5} alignItems="stretch">
-        {/* Левая колонка с информацией */}
         <Grid size={{ xs: 12, md: 4.2 }} sx={{ display: "flex" }}>
           <Stack spacing={2.5} sx={{ width: "100%" }}>
-            {/* Шапка */}
             <Stack direction="row" justifyContent="space-between" alignItems="center">
               <Stack direction="row" spacing={1.5} alignItems="center">
                 <Box sx={{ width: 40, height: 40, borderRadius: "50%", bgcolor: "#000", color: "#fff", display: "grid", placeItems: "center" }}>
@@ -171,7 +190,6 @@ export const CoinMarketOverviewSection: React.FC = () => {
               </Typography>
             </Stack>
 
-            {/* Прогресс-бар диапазона */}
             <Stack spacing={1}>
               <LinearProgress
                 variant="determinate"
@@ -193,7 +211,6 @@ export const CoinMarketOverviewSection: React.FC = () => {
               </Stack>
             </Stack>
 
-            {/* Метрики */}
             <Stack spacing={1.25}>
               <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ py: 1.25 }}>
                 <Stack direction="row" spacing={0.5} alignItems="center">
@@ -318,15 +335,22 @@ export const CoinMarketOverviewSection: React.FC = () => {
 
                   <CartesianGrid vertical={false} stroke="rgba(120,130,190,0.55)" strokeDasharray="3.5 3.5" />
 
-                  <XAxis
-                    dataKey="time"
-                    height={16}
-                    tickMargin={0}
-                    axisLine={false}
-                    tickLine={false}
-                    padding={{ left: 0, right: 0 }}
-                    tick={{ fill: theme.palette.text.secondary, fontSize: 10, fontWeight: 700 }}
-                  />
+                            <XAxis
+                      dataKey="timestamp"
+                      scale="time"
+                      domain={['auto', 'auto']}
+                      type="number"
+                      tickFormatter={formatXAxis}
+                      height={50}                          // увеличено для наклонных меток
+                      interval={Math.ceil(chartData.length / 6)} // показывать примерно 6 меток
+                      minTickGap={20}                       // минимальное расстояние в пикселях
+                      angle={-30}                            // наклон меток
+                      textAnchor="end"                       // выравнивание для наклонного текста
+                      tick={{ fill: theme.palette.text.secondary, fontSize: 10, fontWeight: 700 }}
+                      axisLine={false}
+                      tickLine={false}
+                      padding={{ left: 10, right: 10 }}
+                    />
                   <YAxis
                     orientation="right"
                     domain={yDomain}
@@ -348,7 +372,6 @@ export const CoinMarketOverviewSection: React.FC = () => {
         </Grid>
       </Grid>
 
-      {/* AI-резюме */}
       <Collapse in={isAiSummaryOpen} timeout={320}>
         <Paper sx={{ mt: 4, p: 2, border: "1px solid transparent", borderRadius: 2, background: `linear-gradient(${theme.palette.aiGradient.background}, ${theme.palette.aiGradient.background}) padding-box, linear-gradient(90deg, ${theme.palette.aiGradient.start}, ${theme.palette.aiGradient.end}) border-box`, boxShadow: `0 0 20px 0 ${theme.palette.primary.main}` }}>
           <Stack direction="row" spacing={1} alignItems="center">

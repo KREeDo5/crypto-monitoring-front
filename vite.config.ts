@@ -12,7 +12,11 @@ export default defineConfig({
         changeOrigin: true,
         // Опционально: если нужно переписать путь
         // rewrite: (path) => path.replace(/^\/api/, '')
-      }
+      },'/news-api': {
+        target: 'https://data-api.coindesk.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/news-api/, '/news/v1/article/list'),
+      },
     }
   }
 })
