@@ -2,6 +2,30 @@
 import { CoinCardItem } from "./CoinCardItem.tsx";
 import type { GuideCard, NewsCard } from "../data.ts";
 
+const fetchNews = async () => {
+  try {
+    setLoadingNews(true);
+    const response = await fetch('/news-api?lang=EN&limit=5');
+    if (!response.ok) throw new Error(`Ошибка загрузки новостей: ${response.status}`);
+    const data = await response.json();
+    const articles = data.Data || [];
+    const mappedNews = articles.map((item: any) => ({
+      title: item.TITLE,
+      url: item.URL,
+      description: item.SUBTITLE || item.BODY || '',
+      image: item.IMAGE_URL ? `https:${item.IMAGE_URL}` : undefined, // иногда URL без протокола
+      publishedAt: item.PUBLISHED_ON ? new Date(item.PUBLISHED_ON * 1000).toLocaleString() : undefined,
+      author: item.AUTHORS,
+    }));
+    setNews(mappedNews);
+  } catch (err) {
+    setErrorNews((err as Error).message);
+    console.error('News fetch error:', err);
+  } finally {
+    setLoadingNews(false);
+  }
+};
+
 type CoinCardsSectionProps =
   | {
       title: string;

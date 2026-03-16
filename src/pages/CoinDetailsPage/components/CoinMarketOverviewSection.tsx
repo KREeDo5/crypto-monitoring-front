@@ -73,7 +73,9 @@ export const CoinMarketOverviewSection: React.FC = () => {
   const [activePeriod, setActivePeriod] = useState(0);
   const [isAiSummaryOpen, setIsAiSummaryOpen] = useState(false);
   const tickCount = 6;
-
+  const [aiSummary, setAiSummary] = useState<string>('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   const formatXAxis = (timestamp: number) => {
     const date = new Date(timestamp);
@@ -83,14 +85,14 @@ export const CoinMarketOverviewSection: React.FC = () => {
       return `${date.getHours()}:00`;
     } else if (activePeriod === 2) { // 7д
       return date.toLocaleDateString('ru-RU', { weekday: 'short', hour: '2-digit' });
-    } else { // 30д и другие
+    } else { 
       return date.toLocaleDateString('ru-RU', { day: '2-digit', month: 'short' });
     }
   };
 
   useEffect(() => {
     if (!symbol) return;
-
+    
     const fetchData = async () => {
       setLoading(true);
       setError(null);
@@ -132,6 +134,7 @@ export const CoinMarketOverviewSection: React.FC = () => {
       }
     };
 
+
     fetchData();
   }, [symbol, activePeriod]);
 
@@ -152,6 +155,24 @@ const chartData = history.map((item) => ({
   const yPadding = (yMax - yMin) * 0.1 || 1;
   const yDomain = [yMin - yPadding, yMax + yPadding];
   const interval = chartData.length > 10 ? Math.ceil(chartData.length / 6) : 0;
+
+  const fetchAiSummary = async () => {
+  if (!symbol) return;
+  setAiLoading(true);
+  setAiError(null);
+  try {
+    const periodParam = periodToApiParam[activePeriod];
+    const res = await fetch(`/api/analysis/${symbol.toUpperCase()}?period=${periodParam}`);
+    if (!res.ok) throw new Error('Ошибка загрузки резюме');
+    const data = await res.text(); 
+    setAiSummary(data);
+  } catch (err) {
+    setAiError((err as Error).message);
+  } finally {
+    setAiLoading(false);
+  }
+};
+
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
@@ -375,13 +396,29 @@ const chartData = history.map((item) => ({
       <Collapse in={isAiSummaryOpen} timeout={320}>
         <Paper sx={{ mt: 4, p: 2, border: "1px solid transparent", borderRadius: 2, background: `linear-gradient(${theme.palette.aiGradient.background}, ${theme.palette.aiGradient.background}) padding-box, linear-gradient(90deg, ${theme.palette.aiGradient.start}, ${theme.palette.aiGradient.end}) border-box`, boxShadow: `0 0 20px 0 ${theme.palette.primary.main}` }}>
           <Stack direction="row" spacing={1} alignItems="center">
-            <AutoAwesomeIcon sx={{ height: 18 }} />
-            <Typography sx={{ color: "text.primary", fontWeight: 500, fontSize: 16 }}>Резюме от Искусственного Интеллекта</Typography>
-          </Stack>
-          <Typography sx={{ color: "text.secondary", fontSize: 14, mt: 0.5, lineHeight: 1.4 }}>*Ответ сгенерирован ИИ на основе текущих данных и не является финансовой рекомендацией.</Typography>
-          <Divider sx={{ borderColor: "rgba(90, 112, 255, 0.7)", my: 1.2 }} />
-          <Box dangerouslySetInnerHTML={{ __html: "<p>Здесь будет сгенерированный текст...</p>" }} sx={{ color: "text.secondary", fontSize: 16, lineHeight: 1.4 }} />
-        </Paper>
+      <AutoAwesomeIcon sx={{ height: 18 }} />
+      <Typography sx={{ color: "text.primary", fontWeight: 500, fontSize: 16 }}>
+        Резюме от Искусственного Интеллекта
+      </Typography>
+    </Stack>
+    <Typography sx={{ color: "text.secondary", fontSize: 14, mt: 0.5, lineHeight: 1.4 }}>
+      *Ответ сгенерирован ИИ на основе текущих данных и не является финансовой рекомендацией.
+    </Typography>
+    <Divider sx={{ borderColor: "rgba(90, 112, 255, 0.7)", my: 1.2 }} />
+    
+    {aiLoading ? (
+      <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+        <CircularProgress size={24} />
+      </Box>
+    ) : aiError ? (
+      <Typography color="error" sx={{ py: 1 }}>Ошибка: {aiError}</Typography>
+    ) : (
+      <Box
+        dangerouslySetInnerHTML={{ __html: aiSummary || '<p>Нет данных</p>' }}
+        sx={{ color: "text.secondary", fontSize: 16, lineHeight: 1.4 }}
+      />
+    )}
+  </Paper>
       </Collapse>
     </Paper>
   );

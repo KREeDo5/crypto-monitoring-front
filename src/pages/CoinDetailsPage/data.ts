@@ -8,6 +8,8 @@ export type NewsCard = {
   author: string;
   date: string;
   image: string;
+  url: string;         
+  description?: string; 
 };
 
 export type MetricRow = {

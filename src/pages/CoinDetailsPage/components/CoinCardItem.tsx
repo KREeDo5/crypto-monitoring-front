@@ -1,4 +1,4 @@
-﻿import { Box, Typography } from "@mui/material";
+﻿import { Box, Typography, Paper } from "@mui/material";
 import type { GuideCard, NewsCard } from "../data.ts";
 
 type CoinCardItemProps =
@@ -12,53 +12,131 @@ type CoinCardItemProps =
     };
 
 export const CoinCardItem: React.FC<CoinCardItemProps> = ({ variant, card }) => {
-  return (
-    <Box
-      sx={{
-        flex: "0 0 auto",
-        width: { xs: 200, md: 200 },
-        display: "flex",
-        flexDirection: "column",
-        gap: 1,
-      }}
-    >
+  // Нормализация URL изображения
+  const imageUrl = card.image
+    ? card.image.startsWith('//')
+      ? `https:${card.image}`
+      : card.image
+    : '';
+
+  const handleClick = () => {
+    if (variant === 'news' && card.url) {
+      window.open(card.url, '_blank');
+    }
+  };
+
+  if (variant === 'guide') {
+    return (
       <Box
         sx={{
-          borderRadius: 1,
-          overflow: "hidden",
-          height: 125,
-          p: 0,
-          display: "block",
-          backgroundImage: `url(${card.image})`,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          backgroundRepeat: "no-repeat",
-        }}
-      />
-
-      <Typography
-        sx={{
-          color: "text.primary",
-          fontWeight: 700,
-          fontSize: 14,
-          lineHeight: 1.15,
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          display: "-webkit-box",
-          WebkitBoxOrient: "vertical",
-          WebkitLineClamp: 4,
-          height: variant === "news" ? "64px" : "unset",
+          flex: "0 0 auto",
+          width: { xs: 200, md: 200 },
+          display: "flex",
+          flexDirection: "column",
+          gap: 1,
+          bgcolor: "background.componentPrimary"
         }}
       >
-        {card.title}
-      </Typography>
+        <Box
+          sx={{
+            borderRadius: 1,
+            overflow: "hidden",
+            height: 125,
+            backgroundImage: `url(${imageUrl})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            backgroundRepeat: "no-repeat",
+          }}
+        />
+        <Typography
+          sx={{
+            color: "text.primary",
+            fontWeight: 700,
+            fontSize: 14,
+            lineHeight: 1.15,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            display: "-webkit-box",
+            WebkitBoxOrient: "vertical",
+            WebkitLineClamp: 4,
+          }}
+        >
+          {card.title}
+        </Typography>
+      </Box>
+    );
+  }
 
-      {variant === "news" && (
-        <>
-          <Typography sx={{ color: "text.primary", fontWeight: 300, fontSize: 10, lineHeight: 1 }}>{card.author}</Typography>
-          <Typography sx={{ color: "text.primary", fontWeight: 400, fontSize: 12, lineHeight: 1 }}>{card.date}</Typography>
-        </>
+  // Вариант "news"
+  return (
+    <Paper
+      elevation={0}
+      onClick={handleClick}
+      sx={{
+        width: { xs: 100, md: 260 },
+        cursor: 'pointer',
+        transition: 'transform 0.2s, box-shadow 0.2s',
+        '&:hover': {
+          transform: 'translateY(-4px)',
+          boxShadow: 6,
+        },
+        overflow: 'hidden',
+        borderRadius: 1,
+        bgcolor: "background.componentPrimary"
+      }}
+    >
+      {imageUrl && (
+        <Box
+          sx={{
+            height: 125,
+            backgroundImage: `url(${imageUrl})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          }}
+        />
       )}
-    </Box>
+      <Box sx={{ p: 2 }}>
+        <Typography
+          variant="h6"
+          sx={{
+            fontWeight: 700,
+            fontSize: 16,
+            lineHeight: 1.2,
+            mb: 1,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            display: '-webkit-box',
+            WebkitBoxOrient: 'vertical',
+            WebkitLineClamp: 3,
+          }}
+        >
+          {card.title}
+        </Typography>
+        {card.description && (
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            sx={{
+              mb: 1,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              display: '-webkit-box',
+              WebkitBoxOrient: 'vertical',
+              WebkitLineClamp: 2,
+            }}
+          >
+            {card.description}
+          </Typography>
+        )}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1 }}>
+          <Typography variant="caption" color="text.secondary">
+            {card.author}
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            {card.date}
+          </Typography>
+        </Box>
+      </Box>
+    </Paper>
   );
 };
