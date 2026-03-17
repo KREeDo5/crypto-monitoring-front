@@ -1,4 +1,5 @@
-﻿import {
+﻿import { useNavigate } from 'react-router-dom';
+import {
   alpha,
   Box,
   Paper,
@@ -18,6 +19,7 @@ import {miniChartMock} from "../mock/miniChart.ts";
 import {theme} from "../theme.ts";
 
 type MiniChartCardProps = {
+  symbol: string; 
   name: string;
   price: number;
   changePercent: number;
@@ -25,11 +27,21 @@ type MiniChartCardProps = {
 };
 
 export const MiniChartCard: React.FC<MiniChartCardProps> = ({
+  symbol,
   name,
   price,
   changePercent,
   priceHistory,
 }) => {
+
+  const navigate = useNavigate();
+
+  const handleClick = () => {
+    console.log(symbol);
+    navigate(`/coin/${symbol.toUpperCase()}`);
+  };
+
+
   const fillId = `fill-${name.replace(/\s+/g, "")}`;
   const filterId = `filter-${name.replace(/\s+/g, "")}`;
   const chartData = (priceHistory.length > 0 ? priceHistory : [price]).map(
@@ -52,7 +64,7 @@ export const MiniChartCard: React.FC<MiniChartCardProps> = ({
   });
 
   return (
-    <Paper sx={dynamicGlassSx}>
+    <Paper sx={dynamicGlassSx} onClick={handleClick}>
       <Box
         sx={{
           position: "absolute",
@@ -62,6 +74,11 @@ export const MiniChartCard: React.FC<MiniChartCardProps> = ({
           background: `radial-gradient(circle at bottom, ${alpha(colors.main, 0.2)}, transparent 70%)`,
           opacity: 0.35,
           pointerEvents: "none",
+          transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+        '&:hover': {
+          transform: 'scale(1.02)',
+          boxShadow: '0 8px 16px rgba(0,0,0,0.1)',
+        },
         }}
       />
 

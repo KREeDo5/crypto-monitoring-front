@@ -50,8 +50,9 @@ const YTick = (props: any) => {
 
 const ChartToolTip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
+  const data = payload[0].payload; 
   const value = Number(payload[0].value ?? 0);
-  const date = new Date(label);
+  const date = new Date(data.timestamp); ;
   const formattedDate = date.toLocaleString('ru-RU', { 
     day: '2-digit', month: '2-digit', year: 'numeric',
     hour: '2-digit', minute: '2-digit'
@@ -77,18 +78,18 @@ export const CoinMarketOverviewSection: React.FC = () => {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
 
-  const formatXAxis = (timestamp: number) => {
-    const date = new Date(timestamp);
-    if (activePeriod === 0) { // 1ч
-      return `${date.getHours()}:${date.getMinutes().toString().padStart(2, '0')}`;
-    } else if (activePeriod === 1) { // 24ч
-      return `${date.getHours()}:00`;
-    } else if (activePeriod === 2) { // 7д
-      return date.toLocaleDateString('ru-RU', { weekday: 'short', hour: '2-digit' });
-    } else { 
-      return date.toLocaleDateString('ru-RU', { day: '2-digit', month: 'short' });
-    }
-  };
+const formatXAxis = (timestamp: number) => {
+  const date = new Date(timestamp);
+  if (activePeriod === 0) { // 1ч
+    return `${date.getHours()}:${date.getMinutes().toString().padStart(2, '0')}`;
+  } else if (activePeriod === 1) { // 24ч
+    return `${date.getHours()}:00`;
+  } else if (activePeriod === 2) { // 7д
+    return date.toLocaleDateString('ru-RU', { weekday: 'short', day: 'numeric' });
+  } else { // 30д
+    return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+  }
+};
 
   useEffect(() => {
     if (!symbol) return;
@@ -138,8 +139,15 @@ export const CoinMarketOverviewSection: React.FC = () => {
     fetchData();
   }, [symbol, activePeriod]);
 
-const chartData = history.map((item) => ({
-  timestamp: item.unixSeconds * 1000, // преобразуем в миллисекунды для Date
+  useEffect(() => {
+  if (isAiSummaryOpen) {
+    fetchAiSummary();
+  }
+}, [isAiSummaryOpen, activePeriod, symbol]);
+
+const chartData = history.map((item, idx) => ({
+  index: idx, 
+  timestamp: item.unixSeconds * 1000,
   value: item.price,
 }));
 
@@ -155,6 +163,40 @@ const chartData = history.map((item) => ({
   const yPadding = (yMax - yMin) * 0.1 || 1;
   const yDomain = [yMin - yPadding, yMax + yPadding];
   const interval = chartData.length > 10 ? Math.ceil(chartData.length / 6) : 0;
+
+  const getXAxisTicks = (): number[] => {
+  if (chartData.length === 0) return [];
+  const start = chartData[0].timestamp;
+  const end = chartData[chartData.length - 1].timestamp;
+  const ticks: number[] = [];
+  
+  if (activePeriod === 0) { // 1ч
+    // Каждые 10 минут (600000 мс)
+    const step = 10 * 60 * 1000;
+    for (let t = start; t <= end; t += step) {
+      ticks.push(t);
+    }
+  } else if (activePeriod === 1) { // 24ч
+    // Каждый час (3600000 мс)
+    const step = 60 * 60 * 1000;
+    for (let t = start; t <= end; t += step) {
+      ticks.push(t);
+    }
+  } else if (activePeriod === 2) { // 7д
+    // Каждый день (86400000 мс)
+    const step = 24 * 60 * 60 * 1000;
+    for (let t = start; t <= end; t += step) {
+      ticks.push(t);
+    }
+  } else { // 30д
+    // Каждый день
+    const step = 24 * 60 * 60 * 1000;
+    for (let t = start; t <= end; t += step) {
+      ticks.push(t);
+    }
+  }
+  return ticks;
+};
 
   const fetchAiSummary = async () => {
   if (!symbol) return;
@@ -357,11 +399,11 @@ const chartData = history.map((item) => ({
                   <CartesianGrid vertical={false} stroke="rgba(120,130,190,0.55)" strokeDasharray="3.5 3.5" />
 
                             <XAxis
-                      dataKey="timestamp"
-                      scale="time"
+                      dataKey="index"
+                      scale="band"
                       domain={['auto', 'auto']}
-                      type="number"
-                      tickFormatter={formatXAxis}
+                      type="category"
+                      tickFormatter={(index) => formatXAxis(chartData[index].timestamp)}
                       height={50}                          // увеличено для наклонных меток
                       interval={Math.ceil(chartData.length / 6)} // показывать примерно 6 меток
                       minTickGap={20}                       // минимальное расстояние в пикселях
