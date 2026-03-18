@@ -93,21 +93,21 @@ const formatXAxis = (timestamp: number) => {
   }
 };
 
-  useEffect(() => {
-    if (!symbol) return;
-    
-    const fetchData = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const coinsRes = await fetch('/api/coins/with_metrics');
-        if (!coinsRes.ok) throw new Error('Ошибка загрузки данных монет');
-        const coinsData = await coinsRes.json();
-        const coin = coinsData.find(
-          (c: any) => c.symbol?.toUpperCase() === symbol?.toUpperCase()
-        );
-        if (!coin) throw new Error('Монета не найдена');
-        const safeCoin = {
+useEffect(() => {
+  if (!symbol) return;
+  
+  const fetchData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const coinsRes = await fetch('/api/coins/with_metrics');
+      if (!coinsRes.ok) throw new Error('Ошибка загрузки данных монет');
+      const coinsData = await coinsRes.json();
+      const coin = coinsData.find(
+        (c: any) => c.symbol?.toUpperCase() === symbol?.toUpperCase()
+      );
+      if (!coin) throw new Error('Монета не найдена');
+      const safeCoin = {
         name: coin.name || 'Unknown',
         symbol: coin.symbol || '',
         price: coin.price ?? 0,
@@ -117,35 +117,51 @@ const formatXAxis = (timestamp: number) => {
         marketCap: coin.marketCap ?? 0,
       };
       setCoinInfo(safeCoin);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-        const periodParam = periodToApiParam[activePeriod];
-        const historyRes = await fetch(`/api/metrics/${symbol.toUpperCase()}?period=${periodParam}`);
-        if (!historyRes.ok) throw new Error('Ошибка загрузки истории');
-        const historyData = await historyRes.json();
-        console.log('📊 historyRes:', historyRes);
-        console.log('📊 historyData:', historyData);
-        console.log('📊 history length:', historyData.length);
-        if (historyData.length > 0) {
-          console.log('📊 first item:', historyData[0]);
-          console.log('📊 first item price:', historyData[0].price);
-        }
-        setHistory(historyData);
-      } catch (err) {
-        setError((err as Error).message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-
-    fetchData();
-  }, [symbol, activePeriod]);
+  fetchData();
+}, [symbol]);
 
   useEffect(() => {
   if (isAiSummaryOpen) {
     fetchAiSummary();
   }
 }, [isAiSummaryOpen, activePeriod, symbol]);
+
+useEffect(() => {
+  if (!symbol) return;
+
+  let isMounted = true;
+
+  const loadHistory = async () => {
+    try {
+      const periodParam = periodToApiParam[activePeriod];
+      const res = await fetch(`/api/metrics/${symbol.toUpperCase()}?period=${periodParam}`);
+      if (!res.ok) throw new Error('Ошибка загрузки истории');
+      const data = await res.json();
+      // Сортировка по возрастанию времени
+      const sorted = [...data].sort((a, b) => a.unixSeconds - b.unixSeconds);
+      if (isMounted) {
+        setHistory(sorted);
+      }
+    } catch (err) {
+      console.error('Polling history error:', err);
+    }
+  };
+
+  loadHistory(); // первый запрос
+  let intervalId = setInterval(loadHistory, 30000); // каждые 30 секунд
+
+  return () => {
+    isMounted = false;
+    clearInterval(intervalId);
+  };
+}, [symbol, activePeriod]); 
 
 const chartData = history.map((item, idx) => ({
   index: idx, 
@@ -172,26 +188,22 @@ const chartData = history.map((item, idx) => ({
   const end = chartData[chartData.length - 1].timestamp;
   const ticks: number[] = [];
   
-  if (activePeriod === 0) { // 1ч
-    // Каждые 10 минут (600000 мс)
+  if (activePeriod === 0) { 
     const step = 10 * 60 * 1000;
     for (let t = start; t <= end; t += step) {
       ticks.push(t);
     }
-  } else if (activePeriod === 1) { // 24ч
-    // Каждый час (3600000 мс)
+  } else if (activePeriod === 1) { 
     const step = 60 * 60 * 1000;
     for (let t = start; t <= end; t += step) {
       ticks.push(t);
     }
-  } else if (activePeriod === 2) { // 7д
-    // Каждый день (86400000 мс)
+  } else if (activePeriod === 2) { 
     const step = 24 * 60 * 60 * 1000;
     for (let t = start; t <= end; t += step) {
       ticks.push(t);
     }
-  } else { // 30д
-    // Каждый день
+  } else { 
     const step = 24 * 60 * 60 * 1000;
     for (let t = start; t <= end; t += step) {
       ticks.push(t);
