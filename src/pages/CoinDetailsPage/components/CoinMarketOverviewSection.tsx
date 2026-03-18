@@ -19,6 +19,8 @@ import {
 import { alpha } from "@mui/material/styles";
 import { theme } from "../../../theme.ts";
 import { glassButtonSx, glassButtonSxPressed } from "../../../shared/styles/glass.ts";
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 const formatPrice = (value: number): string => {
   return new Intl.NumberFormat("ru-RU", {
@@ -206,8 +208,9 @@ const chartData = history.map((item, idx) => ({
     const periodParam = periodToApiParam[activePeriod];
     const res = await fetch(`/api/analysis/${symbol.toUpperCase()}?period=${periodParam}`);
     if (!res.ok) throw new Error('Ошибка загрузки резюме');
-    const data = await res.text(); 
-    setAiSummary(data);
+    const data = await res.json(); // парсим JSON
+    const summaryText = data.analysis || 'Нет данных';
+    setAiSummary(summaryText);
   } catch (err) {
     setAiError((err as Error).message);
   } finally {
@@ -449,17 +452,24 @@ const chartData = history.map((item, idx) => ({
     <Divider sx={{ borderColor: "rgba(90, 112, 255, 0.7)", my: 1.2 }} />
     
     {aiLoading ? (
-      <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
-        <CircularProgress size={24} />
-      </Box>
-    ) : aiError ? (
-      <Typography color="error" sx={{ py: 1 }}>Ошибка: {aiError}</Typography>
-    ) : (
-      <Box
-        dangerouslySetInnerHTML={{ __html: aiSummary || '<p>Нет данных</p>' }}
-        sx={{ color: "text.secondary", fontSize: 16, lineHeight: 1.4 }}
-      />
-    )}
+    <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+      <CircularProgress size={24} />
+    </Box>
+  ) : aiError ? (
+    <Typography color="error" sx={{ py: 1 }}>Ошибка: {aiError}</Typography>
+  ) : (
+    <Box sx={{ color: "text.secondary", fontSize: 16, lineHeight: 1.6 }}>
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          strong: ({ children }) => <strong style={{ fontWeight: 700 }}>{children}</strong>,
+          p: ({ children }) => <Typography sx={{ mb: 1.5 }}>{children}</Typography>,
+        }}
+      >
+        {aiSummary || '*Нет данных*'}
+      </ReactMarkdown>
+    </Box>
+  )}
   </Paper>
       </Collapse>
     </Paper>
