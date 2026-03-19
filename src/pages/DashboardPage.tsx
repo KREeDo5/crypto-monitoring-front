@@ -41,12 +41,11 @@ export const DashboardPage: React.FC = () => {
       const articles = data.Data || [];
 
       const mappedNews = articles.map((item: any) => {
-        // Формируем subtitle: автор + относительное время
+
         const author = item.AUTHORS || 'Криптоновости';
         const published = item.PUBLISHED_ON ? timeAgo(item.PUBLISHED_ON) : '';
         const subtitle = published ? `${author} | ${published}` : author;
 
-        // Обрабатываем изображение: иногда приходит с протоколом // или без
         let imageUrl = item.IMAGE_URL;
         if (imageUrl && imageUrl.startsWith('//')) {
           imageUrl = `https:${imageUrl}`;
@@ -55,7 +54,8 @@ export const DashboardPage: React.FC = () => {
         return {
           title: item.TITLE || 'Без заголовка',
           subtitle,
-          imageUrl: imageUrl || '/images/news-placeholder.jpg', // заглушка
+          imageUrl: imageUrl || '/images/news-placeholder.jpg', 
+          url: item.URL,
         };
       });
 
@@ -68,7 +68,6 @@ export const DashboardPage: React.FC = () => {
     }
   };
 
-  // Загрузка монет и истории (существующий код)
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
@@ -130,9 +129,8 @@ export const DashboardPage: React.FC = () => {
     };
 
     fetchInitialData();
-    fetchNews(); // Загружаем новости
+    fetchNews(); 
 
-    // SSE подключение (без изменений)
     let eventSource: EventSource | null = null;
     const connectSSE = () => {
       console.log('Connecting to SSE...');
@@ -216,6 +214,7 @@ export const DashboardPage: React.FC = () => {
                   title="Новости временно недоступны"
                   subtitle="Попробуйте позже"
                   imageUrl="/images/placeholder.jpg"
+                  href={news[0]?.url}
                 />
               ) : (
                 <HeadlineCard
@@ -223,6 +222,7 @@ export const DashboardPage: React.FC = () => {
                   title={news[0]?.title || 'Без заголовка'}
                   subtitle={news[0]?.subtitle || ''}
                   imageUrl={news[0]?.imageUrl || '/images/placeholder.jpg'}
+                  href={news[0]?.url}
                 />
               )
             ) : null}
@@ -241,12 +241,14 @@ export const DashboardPage: React.FC = () => {
                     title="Следите за обновлениями"
                     subtitle="Скоро появятся новости"
                     imageUrl="/images/placeholder.jpg"
+                    href={news[1]?.url}
                   />
                   <HeadlineCard
                     variant="secondary"
                     title="Крипто-дайджест"
                     subtitle="Оставайтесь с нами"
                     imageUrl="/images/placeholder.jpg"
+                    href={news[2]?.url}
                   />
                 </>
               ) : (
@@ -256,12 +258,14 @@ export const DashboardPage: React.FC = () => {
                     title={news[1]?.title || 'Без заголовка'}
                     subtitle={news[1]?.subtitle || ''}
                     imageUrl={news[1]?.imageUrl || '/images/placeholder.jpg'}
+                    href={news[1]?.url}
                   />
                   <HeadlineCard
                     variant="secondary"
                     title={news[2]?.title || 'Без заголовка'}
                     subtitle={news[2]?.subtitle || ''}
                     imageUrl={news[2]?.imageUrl || '/images/placeholder.jpg'}
+                    href={news[2]?.url}
                   />
                 </>
               )}

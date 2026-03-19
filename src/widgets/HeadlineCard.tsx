@@ -9,6 +9,7 @@ type HeadlineCardProps = {
   title: string;
   subtitle: string;
   imageUrl?: string;
+  href: string;
 };
 
 const titleSx = {
@@ -43,11 +44,21 @@ const headlineSubSecondarySx = {
   fontSize: "0.75rem",
 } as const;
 
-export const HeadlineCard: React.FC<HeadlineCardProps> = ({ variant = 'primary', title, subtitle, imageUrl }) => {
+export const HeadlineCard: React.FC<HeadlineCardProps> = ({ 
+  variant = 'primary', 
+  title, 
+  subtitle, 
+  imageUrl,
+  href 
+}) => {
   const isPrimary = variant === 'primary';
 
   return (
     <Paper
+      component="a"
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
       sx={{
         height: "100%",
         flex: 1,
@@ -59,7 +70,9 @@ export const HeadlineCard: React.FC<HeadlineCardProps> = ({ variant = 'primary',
         justifyContent: "flex-end",
         overflow: "hidden",
         position: "relative",
-        cursor: imageUrl ? "pointer" : "default",
+        cursor: imageUrl ? "pointer" : "default", // оставил логику оригинала (только при наличии картинки)
+        textDecoration: "none",
+        color: "inherit",
         "&:hover .headline-bg": {
           transform: "scale(1)",
           filter: "blur(0px)",

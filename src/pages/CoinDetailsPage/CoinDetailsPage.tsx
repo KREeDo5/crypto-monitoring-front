@@ -12,11 +12,18 @@ export const CoinDetailsPage: React.FC = () => {
   const [loadingNews, setLoadingNews] = useState(true);
   const [errorNews, setErrorNews] = useState<string | null>(null);
 
+  const [about, setAbout] = useState<string>('');
+  const [aboutLoading, setAboutLoading] = useState(false);
+  const [aboutError, setAboutError] = useState<string | null>(null);
+
   useEffect(() => {
+    
+    if (!symbol) return;
+
     const fetchNews = async () => {
       try {
         setLoadingNews(true);
-        const response = await fetch('/news-api?lang=EN&limit=5');
+        const response = await fetch(`/news-api?lang=EN&limit=5&categories=${symbol.toUpperCase()}`);
         if (!response.ok) throw new Error(`Ошибка загрузки новостей: ${response.status}`);
         const data = await response.json();
         const articles = data.Data || [];
@@ -38,29 +45,53 @@ export const CoinDetailsPage: React.FC = () => {
     };
 
     fetchNews();
-  }, []);
+  }, [symbol]);
+
+  useEffect(() => {
+    if (!symbol) return;
+
+    const fetchAbout = async () => {
+      setAboutLoading(true);
+      setAboutError(null);
+      try {
+        const res = await fetch(`/api/coins/info/${symbol.toUpperCase()}`);
+        if (!res.ok) throw new Error('Ошибка загрузки описания');
+        const data = await res.json();
+        setAbout(data.description || '');
+      } catch (err) {
+        setAboutError((err as Error).message);
+      } finally {
+        setAboutLoading(false);
+      }
+    };
+
+    fetchAbout();
+  }, [symbol]);
 
   return (
     <Box sx={{ width: "100%", py: 3 }}>
-      <Container maxWidth="lg" sx={{ boxSizing: "content-box" }}>
+      <Container maxWidth="lg">
         <Stack spacing={2.5}>
           <CoinMarketOverviewSection />
-          <CoinAboutSection html={aboutHtml} previewLines={7} />
-          <CoinCardsSection title="Биткоин - руководства" variant="guide" cards={guideCards} />
           
-          {/* Блок с новостями */}
-          {loadingNews ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 1}}>
-              <CircularProgress />
+          {/* Блок описания */}
+          {aboutLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+              <CircularProgress size={24} />
             </Box>
-          ) : errorNews ? (
-            <Alert severity="error" sx={{ my: 2 }}>{errorNews}</Alert>
+          ) : aboutError ? (
+            <Alert severity="error">Ошибка загрузки описания</Alert>
           ) : (
-            <CoinCardsSection 
-              title={`${symbol?.toUpperCase()} - последние новости`} 
-              variant="news" 
-              cards={news} 
-            />
+            <CoinAboutSection html={about} previewLines={7} />
+          )}
+          
+          {/* Блок новостей */}
+          {loadingNews ? (
+            <CircularProgress />
+          ) : errorNews ? (
+            <Alert severity="error">{errorNews}</Alert>
+          ) : (
+            <CoinCardsSection title={`${symbol?.toUpperCase()} - последние новости`} variant="news" cards={news} />
           )}
         </Stack>
       </Container>

@@ -82,13 +82,13 @@ export const CoinMarketOverviewSection: React.FC = () => {
 
 const formatXAxis = (timestamp: number) => {
   const date = new Date(timestamp);
-  if (activePeriod === 0) { // 1ч
+  if (activePeriod === 0) { 
     return `${date.getHours()}:${date.getMinutes().toString().padStart(2, '0')}`;
-  } else if (activePeriod === 1) { // 24ч
+  } else if (activePeriod === 1) { 
     return `${date.getHours()}:00`;
-  } else if (activePeriod === 2) { // 7д
+  } else if (activePeriod === 2) { 
     return date.toLocaleDateString('ru-RU', { weekday: 'short', day: 'numeric' });
-  } else { // 30д
+  } else {
     return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
   }
 };
@@ -140,22 +140,25 @@ useEffect(() => {
 
   const loadHistory = async () => {
     try {
-      const periodParam = periodToApiParam[activePeriod];
-      const res = await fetch(`/api/metrics/${symbol.toUpperCase()}?period=${periodParam}`);
-      if (!res.ok) throw new Error('Ошибка загрузки истории');
-      const data = await res.json();
-      // Сортировка по возрастанию времени
-      const sorted = [...data].sort((a, b) => a.unixSeconds - b.unixSeconds);
-      if (isMounted) {
-        setHistory(sorted);
+    const periodParam = periodToApiParam[activePeriod];
+    const res = await fetch(`/api/metrics/${symbol.toUpperCase()}?period=${periodParam}`);
+    if (!res.ok) throw new Error('Ошибка загрузки истории');
+    const data = await res.json();
+    const sorted = [...data].sort((a, b) => a.unixSeconds - b.unixSeconds);
+    if (isMounted) {
+      setHistory(sorted);
+      if (sorted.length > 0) {
+        const lastPrice = sorted[sorted.length - 1].price;
+        setCoinInfo(prev => prev ? { ...prev, price: lastPrice } : prev);
       }
-    } catch (err) {
-      console.error('Polling history error:', err);
     }
+  } catch (err) {
+    console.error('Polling history error:', err);
+  }
   };
 
-  loadHistory(); // первый запрос
-  let intervalId = setInterval(loadHistory, 30000); // каждые 30 секунд
+  loadHistory(); 
+  let intervalId = setInterval(loadHistory, 30000); 
 
   return () => {
     isMounted = false;
@@ -220,7 +223,7 @@ const chartData = history.map((item, idx) => ({
     const periodParam = periodToApiParam[activePeriod];
     const res = await fetch(`/api/analysis/${symbol.toUpperCase()}?period=${periodParam}`);
     if (!res.ok) throw new Error('Ошибка загрузки резюме');
-    const data = await res.json(); // парсим JSON
+    const data = await res.json(); 
     const summaryText = data.analysis || 'Нет данных';
     setAiSummary(summaryText);
   } catch (err) {
@@ -335,7 +338,6 @@ const chartData = history.map((item, idx) => ({
               </Stack>
             </Stack>
 
-            {/* Кнопка AI-резюме */}
             {!isAiSummaryOpen && (
               <Button
                 startIcon={<AutoAwesomeIcon />}
@@ -364,10 +366,8 @@ const chartData = history.map((item, idx) => ({
           </Stack>
         </Grid>
 
-        {/* Правая колонка с графиком */}
         <Grid size={{ xs: 12, md: 7.8 }} sx={{ display: "flex" }}>
           <Stack spacing={2} sx={{ width: "100%", height: "100%" }}>
-            {/* Переключатели периодов */}
             <Stack direction="row" spacing={1.25} flexWrap="nowrap" sx={{ width: "100%" }}>
               {periods.map((period, index) => (
                 <Chip
@@ -393,7 +393,6 @@ const chartData = history.map((item, idx) => ({
               ))}
             </Stack>
 
-            {/* График */}
             <Box sx={{ flex: 1, minHeight: { xs: 260, md: 0 }, "&, & *": { outline: "none" } }}>
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={chartData} margin={{ top: 12, right: 0, bottom: 0, left: 0 }}>
@@ -419,11 +418,11 @@ const chartData = history.map((item, idx) => ({
                       domain={['auto', 'auto']}
                       type="category"
                       tickFormatter={(index) => formatXAxis(chartData[index].timestamp)}
-                      height={50}                          // увеличено для наклонных меток
-                      interval={Math.ceil(chartData.length / 6)} // показывать примерно 6 меток
-                      minTickGap={20}                       // минимальное расстояние в пикселях
-                      angle={-30}                            // наклон меток
-                      textAnchor="end"                       // выравнивание для наклонного текста
+                      height={50}                         
+                      interval={Math.ceil(chartData.length / 6)} 
+                      minTickGap={20}                       
+                      angle={-30}                            
+                      textAnchor="end"                      
                       tick={{ fill: theme.palette.text.secondary, fontSize: 10, fontWeight: 700 }}
                       axisLine={false}
                       tickLine={false}
