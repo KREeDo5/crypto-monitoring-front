@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Alert, Box, CircularProgress, Container, Stack } from "@mui/material";
+import { Alert, Box, Container, Paper, Skeleton, Stack } from "@mui/material";
 import { CoinMarketOverviewSection } from "./components/CoinMarketOverviewSection.tsx";
 import { CoinAboutSection } from "./components/CoinAboutSection.tsx";
 import { CoinCardsSection } from "./components/CoinCardsSection.tsx";
@@ -40,12 +40,14 @@ export const CoinDetailsPage: React.FC = () => {
   const [aboutLoading, setAboutLoading] = useState(false);
   const [aboutError, setAboutError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const initialPageLoading = loadingNews || aboutLoading;
 
+  useEffect(() => {
     if (!symbol) return;
 
     const fetchNews = async () => {
       try {
+        setErrorNews(null);
         setLoadingNews(true);
         const response = await fetch(`/news-api?lang=EN&limit=5&categories=${symbol.toUpperCase()}`);
         if (!response.ok) throw new Error(`Ошибка загрузки новостей: ${response.status}`);
@@ -68,6 +70,7 @@ export const CoinDetailsPage: React.FC = () => {
             date: item.PUBLISHED_ON ? new Date(item.PUBLISHED_ON * 1000).toLocaleString() : '',
             author: item.AUTHORS || 'Unknown',
           }));
+
         setNews(mappedNews);
       } catch (err) {
         setErrorNews((err as Error).message);
@@ -77,7 +80,7 @@ export const CoinDetailsPage: React.FC = () => {
       }
     };
 
-    fetchNews();
+    void fetchNews();
   }, [symbol]);
 
   useEffect(() => {
@@ -98,7 +101,7 @@ export const CoinDetailsPage: React.FC = () => {
       }
     };
 
-    fetchAbout();
+    void fetchAbout();
   }, [symbol]);
 
   return (
@@ -107,24 +110,41 @@ export const CoinDetailsPage: React.FC = () => {
         <Stack spacing={2.5}>
           <CoinMarketOverviewSection />
 
-          {/* Блок описания */}
-          {aboutLoading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
-              <CircularProgress size={24} />
-            </Box>
+          {initialPageLoading ? (
+            <>
+              <Paper elevation={0} sx={{ p: 2, borderRadius: 5, bgcolor: "background.componentPrimary" }}>
+                <Skeleton variant="text" width="28%" height={32} />
+                <Skeleton variant="text" width="100%" height={22} />
+                <Skeleton variant="text" width="97%" height={22} />
+                <Skeleton variant="text" width="95%" height={22} />
+                <Skeleton variant="text" width="91%" height={22} />
+                <Skeleton variant="text" width="20%" height={28} sx={{ mt: 1 }} />
+              </Paper>
+
+              <Paper elevation={0} sx={{ p: 2, borderRadius: 5, bgcolor: "background.componentPrimary" }}>
+                <Skeleton variant="text" width="34%" height={32} sx={{ mb: 2 }} />
+                <Box sx={{ display: "flex", gap: 2, overflow: "hidden" }}>
+                  {Array.from({ length: 4 }).map((_, index) => (
+                    <Box key={`news-skeleton-${index}`} sx={{ width: { xs: 220, md: 260 }, flex: "0 0 auto" }}>
+                      <Skeleton variant="rounded" height={125} />
+                      <Skeleton variant="text" width="100%" height={26} sx={{ mt: 1.5 }} />
+                      <Skeleton variant="text" width="92%" height={22} />
+                      <Skeleton variant="text" width="84%" height={22} />
+                      <Skeleton variant="text" width="45%" height={18} sx={{ mt: 1 }} />
+                    </Box>
+                  ))}
+                </Box>
+              </Paper>
+            </>
           ) : aboutError ? (
             <Alert severity="error">Ошибка загрузки описания</Alert>
-          ) : (
-            <CoinAboutSection html={about} previewLines={7} />
-          )}
-
-          {/* Блок новостей */}
-          {loadingNews ? (
-            <CircularProgress />
           ) : errorNews ? (
             <Alert severity="error">{errorNews}</Alert>
           ) : (
-            <CoinCardsSection title={`${symbol?.toUpperCase()} - последние новости`} variant="news" cards={news} />
+            <>
+              <CoinAboutSection html={about} previewLines={7} />
+              <CoinCardsSection title={`${symbol?.toUpperCase()} - последние новости`} variant="news" cards={news} />
+            </>
           )}
         </Stack>
       </Container>

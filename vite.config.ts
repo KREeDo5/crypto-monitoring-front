@@ -5,11 +5,10 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
-    allowedHosts: ['slediks.alexpshkov.ru'],
     proxy: {
       // Все запросы, начинающиеся с /api, будут перенаправляться на бэкенд
       '/api': {
-        target: 'http://slediks.alexpshkov.ru:25565', // URL вашего бэкенда
+        target: 'http://localhost:25565', // URL вашего бэкенда
         changeOrigin: true,
         // Опционально: если нужно переписать путь
         // rewrite: (path) => path.replace(/^\/api/, '')
