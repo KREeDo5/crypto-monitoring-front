@@ -12,7 +12,7 @@ import {
   AreaChart,
   CartesianGrid,
   ResponsiveContainer,
-  Tooltip,
+  Tooltip, type TooltipContentProps,
   XAxis,
   YAxis,
 } from "recharts";
@@ -20,7 +20,27 @@ import { alpha } from "@mui/material/styles";
 import { theme } from "../../../theme.ts";
 import { glassButtonSx, glassButtonSxPressed } from "../../../shared/styles/glass.ts";
 import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import remarkGfm from "remark-gfm";
+import type {
+  NameType,
+  ValueType,
+} from "recharts/types/component/DefaultTooltipContent";
+
+type PeriodMetricItem = {
+  price: number;
+  unixSeconds: number;
+};
+
+type CoinMetricItem = {
+  name: string;
+  symbol: string;
+  price: number;
+  marketCap: number;
+  volume24h: number;
+  hourChange: number;
+  dayChange: number;
+  weekChange: number;
+};
 
 const formatPrice = (value: number): string => {
   return new Intl.NumberFormat("ru-RU", {
@@ -39,9 +59,16 @@ const formatCompactPrice = (value: number): string => {
 const periods = ['1ч', '24ч', '7д', '30д'];
 const periodToApiParam = ['HOUR', 'DAY', 'WEEK', 'MONTH'];
 
-const YTick = (props: any) => {
-  const { x, y, payload } = props;
-  const value = payload.value;
+type YTickProps = {
+  x?: number;
+  y?: number;
+  payload?: {
+    value: number;
+  }
+}
+
+const YTick = ({ x = 0, y = 0, payload }: YTickProps) => {
+  const value = payload?.value ?? 0;
   const formatted = formatCompactPrice(value);
   return (
     <text x={x} y={y} dy={4} textAnchor="start" fill={theme.palette.text.secondary} fontSize={10} fontWeight={700}>
@@ -50,11 +77,11 @@ const YTick = (props: any) => {
   );
 };
 
-const ChartToolTip = ({ active, payload, label }: any) => {
+const ChartToolTip = ({ active, payload }: TooltipContentProps<ValueType, NameType>) => {
   if (!active || !payload?.length) return null;
   const data = payload[0].payload; 
   const value = Number(payload[0].value ?? 0);
-  const date = new Date(data.timestamp); ;
+  const date = new Date(data.timestamp);
   const formattedDate = date.toLocaleString('ru-RU', { 
     day: '2-digit', month: '2-digit', year: 'numeric',
     hour: '2-digit', minute: '2-digit'
@@ -71,11 +98,10 @@ export const CoinMarketOverviewSection: React.FC = () => {
   const { symbol } = useParams<{ symbol: string }>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [coinInfo, setCoinInfo] = useState<any>(null);
-  const [history, setHistory] = useState<any[]>([]);
+  const [coinInfo, setCoinInfo] = useState<CoinMetricItem | null>(null);
+  const [history, setHistory] = useState<PeriodMetricItem[]>([]);
   const [activePeriod, setActivePeriod] = useState(0);
   const [isAiSummaryOpen, setIsAiSummaryOpen] = useState(false);
-  const tickCount = 6;
   const [aiSummary, setAiSummary] = useState<string>('');
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
@@ -102,17 +128,18 @@ useEffect(() => {
     try {
       const coinsRes = await fetch('/api/coins/with_metrics');
       if (!coinsRes.ok) throw new Error('Ошибка загрузки данных монет');
-      const coinsData = await coinsRes.json();
+      const coinsData: CoinMetricItem[] = await coinsRes.json();
       const coin = coinsData.find(
-        (c: any) => c.symbol?.toUpperCase() === symbol?.toUpperCase()
+        (c) => c.symbol.toUpperCase() === symbol.toUpperCase()
       );
       if (!coin) throw new Error('Монета не найдена');
-      const safeCoin = {
+      const safeCoin: CoinMetricItem = {
         name: coin.name || 'Unknown',
         symbol: coin.symbol || '',
         price: coin.price ?? 0,
-        percentHour: coin.hourChange ?? 0,   
-        percentDay: coin.dayChange ?? 0,    
+        hourChange: coin.hourChange ?? 0,
+        dayChange: coin.dayChange ?? 0,
+        weekChange: coin.weekChange ?? 0,
         volume24h: coin.volume24h ?? 0,
         marketCap: coin.marketCap ?? 0,
       };
@@ -143,7 +170,7 @@ useEffect(() => {
     const periodParam = periodToApiParam[activePeriod];
     const res = await fetch(`/api/metrics/${symbol.toUpperCase()}?period=${periodParam}`);
     if (!res.ok) throw new Error('Ошибка загрузки истории');
-    const data = await res.json();
+    const data: PeriodMetricItem[] = await res.json();
     const sorted = [...data].sort((a, b) => a.unixSeconds - b.unixSeconds);
     if (isMounted) {
       setHistory(sorted);
@@ -158,7 +185,7 @@ useEffect(() => {
   };
 
   loadHistory(); 
-  let intervalId = setInterval(loadHistory, 30000); 
+  const intervalId = setInterval(loadHistory, 30000); 
 
   return () => {
     isMounted = false;
@@ -183,37 +210,6 @@ const chartData = history.map((item, idx) => ({
   const yMax = Math.max(...yValues);
   const yPadding = (yMax - yMin) * 0.1 || 1;
   const yDomain = [yMin - yPadding, yMax + yPadding];
-  const interval = chartData.length > 10 ? Math.ceil(chartData.length / 6) : 0;
-
-  const getXAxisTicks = (): number[] => {
-  if (chartData.length === 0) return [];
-  const start = chartData[0].timestamp;
-  const end = chartData[chartData.length - 1].timestamp;
-  const ticks: number[] = [];
-  
-  if (activePeriod === 0) { 
-    const step = 10 * 60 * 1000;
-    for (let t = start; t <= end; t += step) {
-      ticks.push(t);
-    }
-  } else if (activePeriod === 1) { 
-    const step = 60 * 60 * 1000;
-    for (let t = start; t <= end; t += step) {
-      ticks.push(t);
-    }
-  } else if (activePeriod === 2) { 
-    const step = 24 * 60 * 60 * 1000;
-    for (let t = start; t <= end; t += step) {
-      ticks.push(t);
-    }
-  } else { 
-    const step = 24 * 60 * 60 * 1000;
-    for (let t = start; t <= end; t += step) {
-      ticks.push(t);
-    }
-  }
-  return ticks;
-};
 
   const fetchAiSummary = async () => {
   if (!symbol) return;
@@ -318,9 +314,9 @@ const chartData = history.map((item, idx) => ({
                   <Typography sx={{ color: "text.secondary", fontSize: 14, fontWeight: 500 }}>Изменение за 1ч</Typography>
                   <InfoOutlinedIcon sx={{ color: "text.secondary", fontSize: 14 }} />
                 </Stack>
-                <Typography sx={{ fontSize: 16, fontWeight: 500, color: coinInfo.percentHour >= 0 ? 'success.main' : 'error.main' }}>
-                  {coinInfo.percentHour != null 
-                    ? (coinInfo.percentHour > 0 ? '+' : '') + coinInfo.percentHour.toFixed(2) + '%' 
+                <Typography sx={{ fontSize: 16, fontWeight: 500, color: coinInfo.hourChange >= 0 ? 'success.main' : 'error.main' }}>
+                  {coinInfo.hourChange != null
+                    ? (coinInfo.hourChange > 0 ? '+' : '') + coinInfo.hourChange.toFixed(2) + '%'
                     : 'N/A'}
                 </Typography>
               </Stack>
@@ -330,9 +326,9 @@ const chartData = history.map((item, idx) => ({
                   <Typography sx={{ color: "text.secondary", fontSize: 14, fontWeight: 500 }}>Изменение за 24ч</Typography>
                   <InfoOutlinedIcon sx={{ color: "text.secondary", fontSize: 14 }} />
                 </Stack>
-                <Typography sx={{ fontSize: 16, fontWeight: 500, color: coinInfo.percentDay >= 0 ? 'success.main' : 'error.main' }}>
-                  {coinInfo.percentDay != null 
-                    ? (coinInfo.percentDay > 0 ? '+' : '') + coinInfo.percentDay.toFixed(2) + '%' 
+                <Typography sx={{ fontSize: 16, fontWeight: 500, color: coinInfo.dayChange >= 0 ? 'success.main' : 'error.main' }}>
+                  {coinInfo.dayChange != null
+                    ? (coinInfo.dayChange > 0 ? '+' : '') + coinInfo.dayChange.toFixed(2) + '%'
                     : 'N/A'}
                 </Typography>
               </Stack>
@@ -418,11 +414,11 @@ const chartData = history.map((item, idx) => ({
                       domain={['auto', 'auto']}
                       type="category"
                       tickFormatter={(index) => formatXAxis(chartData[index].timestamp)}
-                      height={50}                         
-                      interval={Math.ceil(chartData.length / 6)} 
-                      minTickGap={20}                       
-                      angle={-30}                            
-                      textAnchor="end"                      
+                      height={50}
+                      interval={Math.ceil(chartData.length / 6)}
+                      minTickGap={20}
+                      angle={-30}
+                      textAnchor="end"
                       tick={{ fill: theme.palette.text.secondary, fontSize: 10, fontWeight: 700 }}
                       axisLine={false}
                       tickLine={false}
@@ -438,7 +434,7 @@ const chartData = history.map((item, idx) => ({
                     tick={<YTick />}
                   />
 
-                  <Tooltip cursor={{ stroke: "none" }} isAnimationActive animationDuration={100} content={<ChartToolTip />} />
+                  <Tooltip cursor={{ stroke: "none" }} isAnimationActive animationDuration={100} content={(props) => <ChartToolTip {...props} />} />
 
                   <Area type="linear" dataKey="value" stroke="none" fill={`url(#fill)`} tooltipType="none" activeDot={false} animationDuration={1000} />
                   <Area type="linear" dataKey="value" stroke={theme.palette.primary.main} style={{ filter: `url(#filter)` }} fill="transparent" dot={false} />
@@ -461,7 +457,7 @@ const chartData = history.map((item, idx) => ({
       *Ответ сгенерирован ИИ на основе текущих данных и не является финансовой рекомендацией.
     </Typography>
     <Divider sx={{ borderColor: "rgba(90, 112, 255, 0.7)", my: 1.2 }} />
-    
+
     {aiLoading ? (
     <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
       <CircularProgress size={24} />

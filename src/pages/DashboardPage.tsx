@@ -10,6 +10,7 @@ type NewsArticle = {
   PUBLISHED_ON?: number;
   IMAGE_URL?: string;
   TITLE?: string;
+  URL?: string;
 };
 
 type NewsData = {
@@ -64,7 +65,8 @@ function isNewsArticle(item: unknown): item is NewsArticle {
     (obj.AUTHORS === undefined || typeof obj.AUTHORS === "string") &&
     (obj.PUBLISHED_ON === undefined || typeof obj.PUBLISHED_ON === "number") &&
     (obj.IMAGE_URL === undefined || typeof obj.IMAGE_URL === "string") &&
-    (obj.TITLE === undefined || typeof obj.TITLE === "string")
+    (obj.TITLE === undefined || typeof obj.TITLE === "string") &&
+    (obj.URL === undefined || typeof obj.URL === "string")
   );
 }
 
@@ -119,7 +121,6 @@ const MiniChartCardSkeleton: React.FC = () => (
 export const DashboardPage: React.FC = () => {
   const [rows, setRows] = useState<CoinRowData[]>([]);
   const [coinsLoading, setCoinsLoading] = useState<boolean>(true);
-  const [historyLoading, setHistoryLoading] = useState<boolean>(false);
   const [loadedHistorySymbols, setLoadedHistorySymbols] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [news, setNews] = useState<NewsData[]>([]);
@@ -158,7 +159,7 @@ export const DashboardPage: React.FC = () => {
           title: item.TITLE || 'Без заголовка',
           subtitle,
           imageUrl: imageUrl || '/images/news-placeholder.jpg',
-          url: item.URL,
+          url: item.URL || '',
         };
       });
 
@@ -173,8 +174,13 @@ export const DashboardPage: React.FC = () => {
 
   const updateRows = (updates: RowUpdate[]) => {
     setRows((prevRows) => {
-      const rowMap = new Map(prevRows.map((row) => [row.symbol, row]));
-      updates.forEach((update) => rowMap.set(update.symbol, { ...rowMap.get(update.symbol), ...update }));
+      const rowMap = new Map(prevRows.map((row) => [row.symbol, row] as const));
+      updates.forEach((update) => {
+        const existing = rowMap.get(update.symbol);
+        if (!existing) return;
+
+        rowMap.set(update.symbol, { ...existing, ...update });
+      });
       return Array.from(rowMap.values());
     });
   };
@@ -265,8 +271,6 @@ export const DashboardPage: React.FC = () => {
         return;
       }
 
-      setHistoryLoading(true);
-
       const prioritizedCoins = coins.slice(0, INITIAL_HISTORY_ROWS);
       const deferredCoins = coins.slice(INITIAL_HISTORY_ROWS);
 
@@ -277,16 +281,11 @@ export const DashboardPage: React.FC = () => {
       }
 
       if (deferredCoins.length === 0) {
-        setHistoryLoading(false);
         return;
       }
 
       deferredHistoryTimer = window.setTimeout(async () => {
         await loadHistoryBatches(deferredCoins);
-
-        if (!isCancelled) {
-          setHistoryLoading(false);
-        }
       }, 0);
     };
 
@@ -328,7 +327,6 @@ export const DashboardPage: React.FC = () => {
           setError((err as Error).message);
           setRows([]);
           setCoinsLoading(false);
-          setHistoryLoading(false);
         }
       }
     };

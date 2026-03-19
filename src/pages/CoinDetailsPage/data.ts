@@ -45,39 +45,6 @@ export const guideCards: GuideCard[] = [
   },
 ];
 
-export const newsCards: NewsCard[] = [
-  {
-    title: "Китайский аналитик назвал критический уровень: «В биткойне прохождение ниже этого уровня означает смену тренда»",
-    author: "Mete Demiralp",
-    date: "23.02.2026, 20:53",
-    image: "/images/crypto-russia.jpg",
-  },
-  {
-    title: "Падение не может остановить биткоин (BTC) и эфириум (ETH): объявлены новые сигналы рынка",
-    author: "Ali Ara Guven",
-    date: "23.02.2026, 19:26",
-    image: "/images/crypto-hero.jpg",
-  },
-  {
-    title: "Что случилось на крипторынке, пока все спали - обзор от 23 февраля",
-    author: "Erkanel Tokay",
-    date: "23.02.2026, 08:04",
-    image: "/images/crypto-2026.jpg",
-  },
-  {
-    title: "Кашкари критикует криптовалюты и защищает независимость ФРС",
-    author: "Louis Juric",
-    date: "19.02.2026, 17:50",
-    image: "/images/crypto-russia.jpg",
-  },
-  {
-    title: "Кашкари критикует криптовалюты и защищает независимость ФРС",
-    author: "Louis Juric",
-    date: "19.02.2026, 17:50",
-    image: "/images/crypto-russia.jpg",
-  },
-];
-
 export const chartPoints = [
   "68 тыс.",
   "67.5 тыс.",

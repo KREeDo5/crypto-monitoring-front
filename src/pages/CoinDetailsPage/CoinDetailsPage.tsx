@@ -4,11 +4,35 @@ import { Alert, Box, CircularProgress, Container, Stack } from "@mui/material";
 import { CoinMarketOverviewSection } from "./components/CoinMarketOverviewSection.tsx";
 import { CoinAboutSection } from "./components/CoinAboutSection.tsx";
 import { CoinCardsSection } from "./components/CoinCardsSection.tsx";
-import { aboutHtml, guideCards } from "./data.ts";
+import type { NewsCard } from "./data.ts";
+
+type NewsArticle = {
+  BODY?: string;
+  SUBTITLE?: string;
+  AUTHORS?: string;
+  PUBLISHED_ON?: number;
+  IMAGE_URL?: string;
+  TITLE?: string;
+  URL?: string;
+};
+
+function isNewsArticle(item: unknown): item is NewsArticle {
+  if (typeof item !== "object" || item === null) return false;
+
+  const obj = item as Record<string, unknown>;
+
+  return (
+    (obj.AUTHORS === undefined || typeof obj.AUTHORS === "string") &&
+    (obj.PUBLISHED_ON === undefined || typeof obj.PUBLISHED_ON === "number") &&
+    (obj.IMAGE_URL === undefined || typeof obj.IMAGE_URL === "string") &&
+    (obj.TITLE === undefined || typeof obj.TITLE === "string") &&
+    (obj.URL === undefined || typeof obj.URL === "string")
+  );
+}
 
 export const CoinDetailsPage: React.FC = () => {
   const { symbol } = useParams<{ symbol: string }>();
-  const [news, setNews] = useState<any[]>([]);
+  const [news, setNews] = useState<NewsCard[]>([]);
   const [loadingNews, setLoadingNews] = useState(true);
   const [errorNews, setErrorNews] = useState<string | null>(null);
 
@@ -25,16 +49,25 @@ export const CoinDetailsPage: React.FC = () => {
         setLoadingNews(true);
         const response = await fetch(`/news-api?lang=EN&limit=5&categories=${symbol.toUpperCase()}`);
         if (!response.ok) throw new Error(`Ошибка загрузки новостей: ${response.status}`);
-        const data = await response.json();
-        const articles = data.Data || [];
-        const mappedNews = articles.map((item: any) => ({
-          title: item.TITLE,
-          url: item.URL,
-          description: item.SUBTITLE || item.BODY || '',
-          image: item.IMAGE_URL || '',
-          publishedAt: item.PUBLISHED_ON ? new Date(item.PUBLISHED_ON * 1000).toLocaleString() : undefined,
-          author: item.AUTHORS,
-        }));
+        const data: unknown = await response.json();
+        const articles =
+          typeof data === "object" &&
+          data !== null &&
+          "Data" in data &&
+          Array.isArray(data.Data)
+            ? data.Data
+            : [];
+
+        const mappedNews: NewsCard[] = articles
+          .filter(isNewsArticle)
+          .map((item) => ({
+            title: item.TITLE || 'Без заголовка',
+            url: item.URL || '#',
+            description: item.SUBTITLE || item.BODY || '',
+            image: item.IMAGE_URL || '/images/placeholder.jpg',
+            date: item.PUBLISHED_ON ? new Date(item.PUBLISHED_ON * 1000).toLocaleString() : '',
+            author: item.AUTHORS || 'Unknown',
+          }));
         setNews(mappedNews);
       } catch (err) {
         setErrorNews((err as Error).message);
