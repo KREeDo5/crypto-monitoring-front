@@ -50,7 +50,7 @@ export const CoinRow: React.FC<CoinRowProps> = ({ row }) => {
     datasets: [
       {
         data: row.priceHistoryDay,
-        borderColor: row.percentHour >= 0 ? theme.palette.success.main : theme.palette.error.main,
+        borderColor: row.hourChange >= 0 ? theme.palette.success.main : theme.palette.error.main,
         backgroundColor: 'transparent',
         borderWidth: 2,
         pointRadius: 0,
@@ -121,15 +121,15 @@ export const CoinRow: React.FC<CoinRowProps> = ({ row }) => {
 
       {/* Изменения */}
       <ChangeBadge
-        value={row.percentHour}
+        value={row.hourChange}
         sx={{ flex: 0.9, justifyContent: "center", px: 3, py: 2 }}
       />
       <ChangeBadge
-        value={row.percentDay}
+        value={row.dayChange}
         sx={{ flex: 0.9, justifyContent: "center", px: 3, py: 2 }}
       />
       <ChangeBadge
-        value={row.percentWeek}
+        value={row.weekChange}
         sx={{ flex: 0.9, justifyContent: "center", px: 3, py: 2 }}
       />
 
@@ -143,7 +143,7 @@ export const CoinRow: React.FC<CoinRowProps> = ({ row }) => {
         }}
       >
         <Typography variant="button" sx={moneyTextSx} color="text.secondary">
-          ${row.volumeDay.toLocaleString()}
+          ${row.volume24h.toLocaleString()}
         </Typography>
       </Box>
 

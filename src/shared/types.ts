@@ -10,7 +10,7 @@ export type SseChartEvent = {
 };
 
 export type CoinRowData = {
-name: string;
+  name: string;
   symbol: string;
   price: number ; 
   marketCap: number;
@@ -18,7 +18,6 @@ name: string;
   hourChange: number; 
   dayChange: number;
   weekChange: number;
-  volumeDay: number;
-  priceHistoryDay: number[];  
+  priceHistoryDay: number[];
   priceHistoryHour: number[];  
 };

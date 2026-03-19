@@ -318,7 +318,7 @@ const chartData = history.map((item, idx) => ({
                   <Typography sx={{ color: "text.secondary", fontSize: 14, fontWeight: 500 }}>Изменение за 1ч</Typography>
                   <InfoOutlinedIcon sx={{ color: "text.secondary", fontSize: 14 }} />
                 </Stack>
-                <Typography sx={{ color: "text.primary", fontSize: 16, fontWeight: 500, color: coinInfo.percentHour >= 0 ? 'success.main' : 'error.main' }}>
+                <Typography sx={{ fontSize: 16, fontWeight: 500, color: coinInfo.percentHour >= 0 ? 'success.main' : 'error.main' }}>
                   {coinInfo.percentHour != null 
                     ? (coinInfo.percentHour > 0 ? '+' : '') + coinInfo.percentHour.toFixed(2) + '%' 
                     : 'N/A'}
@@ -330,7 +330,7 @@ const chartData = history.map((item, idx) => ({
                   <Typography sx={{ color: "text.secondary", fontSize: 14, fontWeight: 500 }}>Изменение за 24ч</Typography>
                   <InfoOutlinedIcon sx={{ color: "text.secondary", fontSize: 14 }} />
                 </Stack>
-                <Typography sx={{ color: "text.primary", fontSize: 16, fontWeight: 500, color: coinInfo.percentDay >= 0 ? 'success.main' : 'error.main' }}>
+                <Typography sx={{ fontSize: 16, fontWeight: 500, color: coinInfo.percentDay >= 0 ? 'success.main' : 'error.main' }}>
                   {coinInfo.percentDay != null 
                     ? (coinInfo.percentDay > 0 ? '+' : '') + coinInfo.percentDay.toFixed(2) + '%' 
                     : 'N/A'}

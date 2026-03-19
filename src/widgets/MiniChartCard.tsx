@@ -2,6 +2,7 @@
 import {
   alpha,
   Box,
+  CircularProgress,
   Paper,
   type SxProps,
   type Theme,
@@ -15,15 +16,15 @@ import {
   YAxis,
 } from "recharts";
 import {glassCardSx} from "../shared/styles/glass.ts";
-import {miniChartMock} from "../mock/miniChart.ts";
 import {theme} from "../theme.ts";
 
 type MiniChartCardProps = {
-  symbol: string; 
+  symbol: string;
   name: string;
   price: number;
   changePercent: number;
-  priceHistory: number[]; 
+  priceHistory: number[];
+  chartLoading?: boolean;
 };
 
 export const MiniChartCard: React.FC<MiniChartCardProps> = ({
@@ -32,6 +33,7 @@ export const MiniChartCard: React.FC<MiniChartCardProps> = ({
   price,
   changePercent,
   priceHistory,
+  chartLoading = false,
 }) => {
 
   const navigate = useNavigate();
@@ -47,7 +49,6 @@ export const MiniChartCard: React.FC<MiniChartCardProps> = ({
   const chartData = (priceHistory.length > 0 ? priceHistory : [price]).map(
     (value, index) => ({ value, time: index })
   );
-  const data = miniChartMock;
   const isPositive = changePercent >= 0;
 
   const colors = {
@@ -144,81 +145,94 @@ export const MiniChartCard: React.FC<MiniChartCardProps> = ({
         </Box>
 
         <Box sx={{ height: 80, pointerEvents: "none" }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart
-              data={chartData}
-              margin={{ top: 8, right: 0, bottom: 0, left: 0 }}
+          {chartLoading ? (
+            <Box
+              sx={{
+                height: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
             >
-              <defs>
-                <filter
-                  id={filterId}
-                  x="-20%"
-                  y="-50%"
-                  width="140%"
-                  height="200%"
-                >
-                  <feGaussianBlur
-                    in="SourceAlpha"
-                    stdDeviation="6"
-                    result="blur"
-                  />
-                  <feOffset in="blur" dx="0" dy="-2" result="offsetBlur" />
-                  <feFlood
-                    floodColor={colors.main}
-                    floodOpacity="1"
-                    result="color"
-                  />
-                  <feComposite
-                    in="color"
-                    in2="offsetBlur"
-                    operator="in"
-                    result="shadow"
-                  />
-                  <feComposite
-                    in="SourceGraphic"
-                    in2="shadow"
-                    operator="over"
-                  />
-                </filter>
+              <CircularProgress size={22} thickness={5} sx={{ color: colors.main }} />
+            </Box>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart
+                data={chartData}
+                margin={{ top: 8, right: 0, bottom: 0, left: 0 }}
+              >
+                <defs>
+                  <filter
+                    id={filterId}
+                    x="-20%"
+                    y="-50%"
+                    width="140%"
+                    height="200%"
+                  >
+                    <feGaussianBlur
+                      in="SourceAlpha"
+                      stdDeviation="6"
+                      result="blur"
+                    />
+                    <feOffset in="blur" dx="0" dy="-2" result="offsetBlur" />
+                    <feFlood
+                      floodColor={colors.main}
+                      floodOpacity="1"
+                      result="color"
+                    />
+                    <feComposite
+                      in="color"
+                      in2="offsetBlur"
+                      operator="in"
+                      result="shadow"
+                    />
+                    <feComposite
+                      in="SourceGraphic"
+                      in2="shadow"
+                      operator="over"
+                    />
+                  </filter>
 
-                <linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={colors.main} stopOpacity={0.9} />
-                  <stop
-                    offset="100%"
-                    stopColor={colors.main}
-                    stopOpacity={0.05}
-                  />
-                </linearGradient>
-              </defs>
+                  <linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={colors.main} stopOpacity={0.9} />
+                    <stop
+                      offset="100%"
+                      stopColor={colors.main}
+                      stopOpacity={0.05}
+                    />
+                  </linearGradient>
+                </defs>
 
-      <XAxis dataKey="time" hide padding={{ left: 0, right: 0 }} />
-      <YAxis 
-        hide 
-        domain={['dataMin', 'dataMax']} 
-        padding={{ top: 20, bottom: 20 }} 
-      />
+                <XAxis dataKey="time" hide padding={{ left: 0, right: 0 }} />
+                <YAxis
+                  hide
+                  domain={['dataMin', 'dataMax']}
+                  padding={{ top: 20, bottom: 20 }}
+                />
 
-              <Area
-                type="monotone"
-                dataKey="value"
-                stroke="none"
-                fill={`url(#${fillId})`}
-                tooltipType="none"
-                activeDot={false}
-                animationDuration={1000}
-              />
-              <Area
-                type="monotone"
-                dataKey="value"
-                stroke={colors.main}
-                style={{ filter: `url(#${filterId})` }}
-                fill="transparent"
-                tooltipType="none"
-                dot={false}
-                activeDot={false}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+                <Area
+                  type="monotone"
+                  dataKey="value"
+                  stroke="none"
+                  fill={`url(#${fillId})`}
+                  tooltipType="none"
+                  activeDot={false}
+                  animationDuration={1000}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="value"
+                  stroke={colors.main}
+                  style={{ filter: `url(#${filterId})` }}
+                  fill="transparent"
+                  tooltipType="none"
+                  dot={false}
+                  activeDot={false}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
         </Box>
       </Box>
     </Paper>

@@ -1,6 +1,6 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Box, Container, Stack, CircularProgress, Alert } from "@mui/material";
+import { Alert, Box, CircularProgress, Container, Stack } from "@mui/material";
 import { CoinMarketOverviewSection } from "./components/CoinMarketOverviewSection.tsx";
 import { CoinAboutSection } from "./components/CoinAboutSection.tsx";
 import { CoinCardsSection } from "./components/CoinCardsSection.tsx";
@@ -17,7 +17,7 @@ export const CoinDetailsPage: React.FC = () => {
   const [aboutError, setAboutError] = useState<string | null>(null);
 
   useEffect(() => {
-    
+
     if (!symbol) return;
 
     const fetchNews = async () => {
@@ -73,7 +73,7 @@ export const CoinDetailsPage: React.FC = () => {
       <Container maxWidth="lg">
         <Stack spacing={2.5}>
           <CoinMarketOverviewSection />
-          
+
           {/* Блок описания */}
           {aboutLoading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
@@ -84,7 +84,7 @@ export const CoinDetailsPage: React.FC = () => {
           ) : (
             <CoinAboutSection html={about} previewLines={7} />
           )}
-          
+
           {/* Блок новостей */}
           {loadingNews ? (
             <CircularProgress />

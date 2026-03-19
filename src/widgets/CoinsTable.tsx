@@ -1,9 +1,10 @@
-﻿import { Box } from "@mui/material";
+import { Box, Skeleton } from "@mui/material";
 import { CoinRow } from "./CoinRow.tsx";
-import type {CoinRowData} from "../shared/types.ts";
+import type { CoinRowData } from "../shared/types.ts";
 
 type CoinsTableProps = {
   rows: CoinRowData[];
+  skeletonRows?: number;
 };
 
 const headerCellSx = {
@@ -38,7 +39,7 @@ const columns = [
   },
 ];
 
-export const CoinsTable: React.FC<CoinsTableProps> = ({ rows }) => {
+export const CoinsTable: React.FC<CoinsTableProps> = ({ rows, skeletonRows = 0 }) => {
   return (
     <Box
       sx={{
@@ -57,7 +58,7 @@ export const CoinsTable: React.FC<CoinsTableProps> = ({ rows }) => {
           display: "flex",
         }}
       >
-        {columns.map(col => (
+        {columns.map((col) => (
           <Box
             key={col.key}
             sx={{
@@ -73,10 +74,51 @@ export const CoinsTable: React.FC<CoinsTableProps> = ({ rows }) => {
         ))}
       </Box>
 
-      {rows.map(row => (
+      {rows.map((row) => (
         <CoinRow key={row.symbol} row={row} />
+      ))}
+
+      {Array.from({ length: skeletonRows }).map((_, index) => (
+        <Box
+          key={`coin-row-skeleton-${index}`}
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            borderTop: 1,
+            borderTopStyle: "solid",
+            borderTopColor: "background.default",
+            px: 3,
+            py: 2,
+            gap: 2,
+          }}
+        >
+          <Box sx={{ flex: 2, display: "flex", alignItems: "center", gap: 1.5 }}>
+            <Skeleton variant="circular" width={32} height={32} />
+            <Box sx={{ width: "100%" }}>
+              <Skeleton variant="text" width="35%" height={24} />
+              <Skeleton variant="text" width="20%" height={18} />
+            </Box>
+          </Box>
+          <Box sx={{ flex: 0.9, display: "flex", justifyContent: "center" }}>
+            <Skeleton variant="rounded" width={60} height={24} />
+          </Box>
+          <Box sx={{ flex: 0.9, display: "flex", justifyContent: "center" }}>
+            <Skeleton variant="rounded" width={60} height={24} />
+          </Box>
+          <Box sx={{ flex: 0.9, display: "flex", justifyContent: "center" }}>
+            <Skeleton variant="rounded" width={60} height={24} />
+          </Box>
+          <Box sx={{ flex: 1.8, display: "flex", justifyContent: "flex-end" }}>
+            <Skeleton variant="text" width="70%" height={24} />
+          </Box>
+          <Box sx={{ flex: 1.8, display: "flex", justifyContent: "flex-end" }}>
+            <Skeleton variant="text" width="75%" height={24} />
+          </Box>
+          <Box sx={{ width: "160px", px: 2 }}>
+            <Skeleton variant="rounded" width="100%" height={48} />
+          </Box>
+        </Box>
       ))}
     </Box>
   );
 };
-
