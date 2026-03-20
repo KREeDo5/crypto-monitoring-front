@@ -63,12 +63,20 @@ export const CoinDetailsPage: React.FC = () => {
         const mappedNews: NewsCard[] = articles
           .filter(isNewsArticle)
           .map((item) => ({
-            title: item.TITLE || 'Без заголовка',
-            url: item.URL || '#',
-            description: item.SUBTITLE || item.BODY || '',
-            image: item.IMAGE_URL || '/images/placeholder.jpg',
-            date: item.PUBLISHED_ON ? new Date(item.PUBLISHED_ON * 1000).toLocaleString() : '',
-            author: item.AUTHORS || 'Unknown',
+            title: item.TITLE || "Без заголовка",
+            url: item.URL || "#",
+            description: item.SUBTITLE || item.BODY || "",
+            image: item.IMAGE_URL || "/images/placeholder.jpg",
+            date: item.PUBLISHED_ON
+              ? new Date(item.PUBLISHED_ON * 1000).toLocaleString("ru-RU", {
+                  day: "2-digit",
+                  month: "2-digit",
+                  year: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })
+              : "",
+            author: item.AUTHORS || "Unknown",
           }));
 
         setNews(mappedNews);

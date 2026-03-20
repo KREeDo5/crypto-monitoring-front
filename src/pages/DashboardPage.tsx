@@ -475,7 +475,7 @@ export const DashboardPage: React.FC = () => {
           </Grid>
         </Grid>
 
-        <Grid container spacing={2} sx={{ height: "156px", my: 2, overflow: "visible" }}>
+        <Grid container spacing={2} sx={{ height: "132px", my: 3, overflow: "visible" }}>
           {coinsLoading
             ? Array.from({ length: 5 }).map((_, index) => (
                 <Grid size={{ xs: 4, md: 2.4 }} key={`mini-chart-skeleton-${index}`}>

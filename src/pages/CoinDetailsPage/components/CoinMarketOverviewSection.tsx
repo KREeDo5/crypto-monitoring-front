@@ -112,6 +112,7 @@ export const CoinMarketOverviewSection: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [coinInfo, setCoinInfo] = useState<CoinMetricItem | null>(null);
   const [history, setHistory] = useState<PeriodMetricItem[]>([]);
+  const [dayPeriodHistory, setDayPeriodHistory] = useState<PeriodMetricItem[]>([]);
   const [activePeriod, setActivePeriod] = useState(0);
   const [isAiSummaryOpen, setIsAiSummaryOpen] = useState(false);
   const [aiSummary, setAiSummary] = useState<string>('');
@@ -188,6 +189,21 @@ useEffect(() => {
       if (!res.ok) throw new Error('Ошибка загрузки истории');
       const data: PeriodMetricItem[] = await res.json();
       const sorted = [...data].sort((a, b) => a.unixSeconds - b.unixSeconds);
+
+      if (activePeriod === 1) {
+        if (isMounted) setDayPeriodHistory(sorted);
+      } else {
+        try {
+          const dayRes = await fetch(`/api/metrics/${symbol.toUpperCase()}?period=DAY`);
+          if (!dayRes.ok) throw new Error('Ошибка загрузки истории за 24ч');
+          const dayData: PeriodMetricItem[] = await dayRes.json();
+          const daySorted = [...dayData].sort((a, b) => a.unixSeconds - b.unixSeconds);
+          if (isMounted) setDayPeriodHistory(daySorted);
+        } catch (err) {
+          console.error('Polling day history error:', err);
+        }
+      }
+
       if (isMounted) {
         setHistory(sorted);
         if (sorted.length > 0) {
@@ -224,7 +240,15 @@ const chartData = history.map((item, idx) => ({
   value: item.price,
 }));
 
-  const dayHistory = history.filter((_, idx) => idx >= history.length - 24);
+  const range24hSource = activePeriod === 1 ? history : dayPeriodHistory;
+
+  const lastUnixSeconds = range24hSource.length
+    ? range24hSource[range24hSource.length - 1].unixSeconds
+    : 0;
+  const dayCutoffUnixSeconds = lastUnixSeconds ? lastUnixSeconds - 24 * 60 * 60 : 0;
+  const dayHistory = dayCutoffUnixSeconds
+    ? range24hSource.filter((d) => d.unixSeconds >= dayCutoffUnixSeconds)
+    : [];
   const minPrice = dayHistory.length ? Math.min(...dayHistory.map(d => d.price)) : 0;
   const maxPrice = dayHistory.length ? Math.max(...dayHistory.map(d => d.price)) : 0;
   const currentPrice = coinInfo?.price || 0;

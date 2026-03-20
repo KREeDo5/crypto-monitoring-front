@@ -1,4 +1,4 @@
-import { Box, Skeleton } from "@mui/material";
+﻿import { Box, Skeleton } from "@mui/material";
 import { CoinRow } from "./CoinRow.tsx";
 import type { CoinRowData } from "../shared/types.ts";
 

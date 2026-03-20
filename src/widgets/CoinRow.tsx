@@ -85,12 +85,19 @@ export const CoinRow: React.FC<CoinRowProps> = ({ row }) => {
         borderTop: 1,
         borderTopStyle: "solid",
         borderTopColor: "background.default",
+        cursor: "pointer",
+        transition: "transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out",
+        "&:hover": {
+          transform: "scale(1.01)",
+          boxShadow: "0 8px 16px rgba(0,0,0,0.1)",
+        },
       }}
     >
       {/* Колонка с названием и символом */}
       <Box
         sx={{
-          flex: 2,
+          flex: "2 1 0%",
+          minWidth: 0,
           display: "flex",
           alignItems: "center",
           gap: 1.5,
@@ -109,11 +116,29 @@ export const CoinRow: React.FC<CoinRowProps> = ({ row }) => {
         >
           {initial}
         </Avatar>
-        <Box>
-          <Typography variant="button" sx={{ textTransform: "none" }} color="text.primary">
+        <Box sx={{ display: "flex", alignItems: "baseline", minWidth: 0 }}>
+          <Typography
+            component="span"
+            variant="button"
+            color="text.primary"
+            sx={{
+              textTransform: "none",
+              minWidth: 0,
+              flex: "1 1 auto",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
             {row.name}
           </Typography>
-          <Typography variant="caption" color="primary.main" sx={{ ml: 1 }}>
+
+          <Typography
+            component="span"
+            variant="caption"
+            color="primary.main"
+            sx={{ ml: 1, flex: "0 0 auto", whiteSpace: "nowrap" }}
+          >
             {row.symbol}
           </Typography>
         </Box>
@@ -161,11 +186,22 @@ export const CoinRow: React.FC<CoinRowProps> = ({ row }) => {
         </Typography>
       </Box>
 
-      <Box sx={{ width: "160px", height: "64px", px: 2, py: 0.5, pointerEvents: "none" }}>
+      <Box
+        sx={{
+          width: "160px",
+          height: "64px",
+          px: 2,
+          py: 0.5,
+          pointerEvents: "none",
+          boxSizing: "border-box",
+        }}
+      >
         {row.priceHistoryDay.length > 0 ? (
           <Line data={chartData} options={options} />
         ) : (
-          <Box sx={{ width: '100%', height: '100%', bgcolor: 'background.paper' }} />
+          <Box
+            sx={{ width: "100%", height: "100%", bgcolor: "background.paper" }}
+          />
         )}
       </Box>
     </Box>

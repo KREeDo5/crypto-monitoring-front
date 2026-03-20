@@ -74,28 +74,33 @@ export const CoinCardItem: React.FC<CoinCardItemProps> = ({ variant, card }) => 
       onClick={handleClick}
       sx={{
         width: { xs: 100, md: 260 },
-        cursor: 'pointer',
-        transition: 'transform 0.2s, box-shadow 0.2s',
-        '&:hover': {
-          transform: 'translateY(-4px)',
-          boxShadow: 6,
+        cursor: "pointer",
+        transition: "transform 0.25s ease-out",
+        "&:hover": {
+          transform: "scale(1.05)",
         },
-        overflow: 'hidden',
+        "&:hover .card-img": {
+          transform: "scale(1.05)",
+        },
+        overflow: "hidden",
         borderRadius: 1,
-        bgcolor: "background.componentPrimary"
+        bgcolor: "background.componentPrimary",
       }}
     >
       {imageUrl && (
         <Box
+          className={"card-img"}
           sx={{
             height: 125,
             backgroundImage: `url(${imageUrl})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            transform: "scale(1)",
+            transition: "transform 0.25s ease-out",
           }}
         />
       )}
-      <Box sx={{ p: 2 }}>
+      <Box sx={{ pt: 2 }}>
         <Typography
           variant="h6"
           sx={{
@@ -103,10 +108,10 @@ export const CoinCardItem: React.FC<CoinCardItemProps> = ({ variant, card }) => 
             fontSize: 16,
             lineHeight: 1.2,
             mb: 1,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            display: '-webkit-box',
-            WebkitBoxOrient: 'vertical',
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            display: "-webkit-box",
+            WebkitBoxOrient: "vertical",
             WebkitLineClamp: 3,
           }}
         >
@@ -118,17 +123,25 @@ export const CoinCardItem: React.FC<CoinCardItemProps> = ({ variant, card }) => 
             color="text.secondary"
             sx={{
               mb: 1,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              display: '-webkit-box',
-              WebkitBoxOrient: 'vertical',
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              display: "-webkit-box",
+              WebkitBoxOrient: "vertical",
               WebkitLineClamp: 2,
             }}
           >
             {card.description}
           </Typography>
         )}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1 }}>
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "space-between",
+            alignItems: "start",
+            mt: 1,
+          }}
+        >
           <Typography variant="caption" color="text.secondary">
             {card.author}
           </Typography>

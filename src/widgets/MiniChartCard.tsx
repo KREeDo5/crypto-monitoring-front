@@ -65,7 +65,14 @@ export const MiniChartCard: React.FC<MiniChartCardProps> = ({
   });
 
   return (
-    <Paper sx={dynamicGlassSx} onClick={handleClick}>
+    <Paper sx={[dynamicGlassSx,
+      {
+        cursor: "pointer",
+        transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+      '&:hover': {
+        transform: 'scale(1.02)',
+        boxShadow: '0 8px 16px rgba(0,0,0,0.1)',
+      }, }]} onClick={handleClick}>
       <Box
         sx={{
           position: "absolute",
@@ -75,11 +82,6 @@ export const MiniChartCard: React.FC<MiniChartCardProps> = ({
           background: `radial-gradient(circle at bottom, ${alpha(colors.main, 0.2)}, transparent 70%)`,
           opacity: 0.35,
           pointerEvents: "none",
-          transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
-        '&:hover': {
-          transform: 'scale(1.02)',
-          boxShadow: '0 8px 16px rgba(0,0,0,0.1)',
-        },
         }}
       />
 
